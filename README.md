@@ -37,7 +37,7 @@ You can also change the region sizes and select the color mode.
 
 More later.
 
-### Additional Featured Desired
+### Additional Features Desired
 
 Implement additions features supported by EPICS_NTNDA_Viewer
 
