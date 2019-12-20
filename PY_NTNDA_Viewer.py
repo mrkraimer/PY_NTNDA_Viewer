@@ -4,136 +4,119 @@ import sys,time
 import numpy as np
 from pvaccess import *
 
-from threading import Event, Thread
+from PyQt5.QtWidgets import QApplication
+from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
-from PyQt5 import QtCore,  QtGui
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QLineEdit, QLabel
-from PyQt5.QtCore import Qt
+maxsize = 800
+minsize = 16
+datatype = None
 
-from PyQt5.QtGui import QImage, QPixmap, qRgb
-
-class ImageDisplay(QWidget):
-
-    def __init__(self):
-        super().__init__()
+class ImageDisplay(RawImageWidget):
+    def __init__(self, parent=None, **kargs):
+        RawImageWidget.__init__(self, parent=parent)
         self.title = 'ImageDisplay'
         self.left = 1
         self.top = 1
-        self.width = 640
-        self.height = 480
+        self.width = maxsize
+        self.height = maxsize
+        self.data = None
+        self.datatype = 'none'
         self.initUI()
     
     def initUI(self):
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.label = QLabel(self)
         self.show()    
 
-    def newImage(self,pixmap):
-        width = pixmap.width()*.75
-        height = pixmap.height()*.75
+    def newImage(self,arg):
+        value = None
+        try:
+            value = arg['value'][0]
+        except Exception as error:
+            self.title = repr(error)
+            return
+        if len(value) != 1 :
+            self.title = 'value length not 1'
+            return
+        dimArray = None
+        try:
+            dimArray = arg['dimension']
+        except Exception as error:
+            self.title = repr(error)
+            return
+        image = None
+        ny = 0
+        nx = 0
+        ndim = len(dimArray)
+        if ndim ==2 :
+            ny = dimArray[1]["size"]
+            nx = dimArray[0]["size"]
+            element = None
+            for x in value :
+                element = x
+            if element == None : 
+                raise Exception('value is not numpyarray')
+            data = value[element]
+            if str(data.dtype)!=self.datatype :
+                self.datatype = str(data.dtype)
+                print("datatype=",self.datatype,flush=True)
+            image = data.reshape(nx,ny)
+        elif ndim ==3 :
+            if dimArray[0]["size"]==3 :
+                nz = dimArray[0]["size"]
+                nx = dimArray[1]["size"]
+                ny = dimArray[2]["size"]
+            elif dimArray[1]["size"]==3 :
+                nz = dimArray[1]["size"]
+                nx = dimArray[0]["size"]
+                ny = dimArray[2]["size"]
+            elif dimArray[2]["size"]==3 :
+                nz = dimArray[2]["size"]
+                nx = dimArray[0]["size"]
+                ny = dimArray[1]["size"]
+            else  :  raise Exception('no dim = 3')
+            element = None
+            for x in value :
+                element = x
+            if element == None : 
+                raise Exception('value is not numpyarray')
+            data = value[element]
+            if str(data.dtype)!=self.datatype :
+                self.datatype = str(data.dtype)
+                print("datatype=",self.datatype,flush=True)
+            image = data.reshape(ny,nx,nz)
+        else :
+            raise Exception('ndim not 2 or 3')
+        if ny <minsize or nx<minsize :
+            raise Exception('ny <',minsize,' or nx<',minsize)
+        width = nx
+        height = ny
+        if width==height :
+            if width>maxsize : width = maxsize
+            if height>maxsize : height = maxsize
+        elif width<height :
+            ratio = width/height
+            if height>maxsize : height = maxsize
+            width = height*ratio
+        else :
+            ratio = height/width
+            if width>maxsize : width = maxsize
+            height = width*ratio
         if (height!=self.height) or (width!=self.width) :
-            time.sleep(.1)
             print("resize")
-            self.height = height
             self.width = width
-            self.label.resize(width,height)
-            self.resize(width,height)
-            time.sleep(.1)
-        self.label.setPixmap(pixmap)
-        pixmap = None
-
-gray_color_table = [qRgb(i, i, i) for i in range(256)]
-
-def create2dPixmap(value,dimArray) :
-    ny = dimArray[0]["size"]
-    nx = dimArray[1]["size"]
-    element = None
-    for x in value :
-        element = x
-    if element == None : 
-       raise Exception('value is not numpyarray')
-    data = value[element]
-    datatype = data.dtype
-    image = data.reshape(nx,ny)
-    if image.dtype != np.uint8:
-       raise Exception('value element type is not uint8')
-    qim = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_Indexed8)
-    qim.setColorTable(gray_color_table)
-    pixmap = QPixmap(qim)
-    return pixmap
-
-
-def create3dPixmap(value,dimArray) :
-    if dimArray[0]["size"]==3 :
-        nx = dimArray[1]["size"]
-        ny = dimArray[2]["size"]
-        nz = dimArray[0]["size"]
-    elif dimArray[1]["size"]==3 :
-        nx = dimArray[0]["size"]
-        ny = dimArray[2]["size"]
-        nz = dimArray[1]["size"]
-    elif dimArray[2]["size"]==3 :
-        nx = dimArray[0]["size"]
-        ny = dimArray[1]["size"]
-        nz = dimArray[2]["size"]
-    else  :  raise Exception('no dim = 3')
-    element = None
-    for x in value :
-        element = x
-    if element == None : 
-       raise Exception('value is not numpyarray')
-    data = value[element]
-    datatype = data.dtype
-    image = data.reshape(ny,nx,nz)
-    if image.dtype != np.uint8:
-       raise Exception('value element type is not uint8')
-    qim = QImage(image.data, image.shape[1], image.shape[0], image.strides[0], QImage.Format_RGB888)
-    pixmap = QPixmap(qim)
-    return pixmap
-
-def createPixmap(value,dimArray) :
-    ndim = len(dimArray)
-    if ndim ==2 :
-        return create2dPixmap(value,dimArray)
-    if ndim ==3 :
-        return create3dPixmap(value,dimArray)
-    raise Exception('ndim not 2 or 3')
+            self.height = height
+            self.setGeometry(self.left, self.top, self.width, self.height)
+            print("self.width=",self.width," self.height=",self.height,flush=True)
+        self.setImage(image)
 
 def mycallback(arg):
     global lasttime
     global nImages
-    global imageThread
-    global app
-    global display
     global imageDisplay
-    time.sleep(.001)
-    value = None
     try:
-        value = arg['value'][0]
+        imageDisplay.newImage(arg)
     except Exception as error:
-        imageDisplay.setWindowTitle(repr(error))
-        return
-    if len(value) != 1 :
-        imageDisplay.setWindowTitle('value length not 1')
-        return
-    dimArray = None
-    try:
-        dimArray = arg['dimension']
-    except Exception as error:
-        imageDisplay.setWindowTitle(repr(error))
-        return
-    pixmap = None
-    try:
-        pixmap = createPixmap(value,dimArray)
-    except Exception as error :
-        imageDisplay.setWindowTitle(repr(error))
-        return
-    try:
-        imageDisplay.newImage(pixmap)
-    except Exception as error:
-        imageDisplay.setWindowTitle(repr(error))
-        return
-    time.sleep(.002)
+        imageDisplay.title = repr(error)
     nImages = nImages + 1
     timenow = time.time()
     timediff = timenow - lasttime

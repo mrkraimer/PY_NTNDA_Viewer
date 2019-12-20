@@ -33,11 +33,9 @@ You can also change the region sizes and select the color mode.
 
 ## Remaining work required
 
-### race codition must be fixed
+### changing region sizes leads to weird behavior
 
-There are a couple of sleep statements that are used to prevent PY_NTNDA_Viewer from crashing.
-It still crashes if lots of other activity is occuring.
-This must be fixed.
+More later.
 
 ### Additional Featured Desired
 
@@ -45,13 +43,15 @@ Implement additions features supported by EPICS_NTNDA_Viewer
 
 Amoung these are
 
-1) Add support for other Data Types
+1) Add support for other Data Types, currently only uint8 and int8 has been tested
 2) Allow monitoring to be started and stopped.
 3) Allow the channelName to be changed.
 4) Add support for compression
 
 ### Performance
 
-Using the image with no changes to color or size I see 120-130 images per second.
-With EPICS_NTNDA_Viewer I see 130-140 images per second.
-BUT EPICS_NTNDA_Viewer uses more CPU then PY_NTNDA_Viewer.
+I set acquire period to .001 (it was initially .005)
+EPICS_NTDA_Viewer could only do about 140 frames/second
+PY_NTDA_Viewer does about 330 frames/second.
+
+EPICS_NTNDA_Viewer uses MORE CPU then PY_NTNDA_Viewer.
