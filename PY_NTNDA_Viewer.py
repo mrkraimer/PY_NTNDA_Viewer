@@ -7,9 +7,6 @@ from pvaccess import *
 from PyQt5.QtWidgets import QApplication
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
-maxsize = 800
-minsize = 16
-datatype = None
 
 class ImageDisplay(RawImageWidget):
     def __init__(self, parent=None, **kargs):
@@ -17,8 +14,10 @@ class ImageDisplay(RawImageWidget):
         self.title = 'ImageDisplay'
         self.left = 1
         self.top = 1
-        self.width = maxsize
-        self.height = maxsize
+        self.maxsize = 800
+        self.minsize = 16
+        self.width = self.maxsize
+        self.height = self.maxsize
         self.data = None
         self.datatype = 'none'
         self.initUI()
@@ -86,20 +85,20 @@ class ImageDisplay(RawImageWidget):
             image = data.reshape(ny,nx,nz)
         else :
             raise Exception('ndim not 2 or 3')
-        if ny <minsize or nx<minsize :
-            raise Exception('ny <',minsize,' or nx<',minsize)
+        if ny <self.minsize or nx<self.minsize :
+            raise Exception('ny <',self.minsize,' or nx<',self.minsize)
         width = nx
         height = ny
         if width==height :
-            if width>maxsize : width = maxsize
-            if height>maxsize : height = maxsize
+            if width>self.maxsize : width = self.maxsize
+            if height>self.maxsize : height = self.maxsize
         elif width<height :
             ratio = width/height
-            if height>maxsize : height = maxsize
+            if height>self.maxsize : height = self.maxsize
             width = height*ratio
         else :
             ratio = height/width
-            if width>maxsize : width = maxsize
+            if width>self.maxsize : width = self.maxsize
             height = width*ratio
         if (height!=self.height) or (width!=self.width) :
             print("resize")
