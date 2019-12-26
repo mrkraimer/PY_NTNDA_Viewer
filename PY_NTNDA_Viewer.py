@@ -8,12 +8,14 @@ from PyQt5.QtWidgets import QPushButton,QLayout,QHBoxLayout,QVBoxLayout,QLayoutI
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 class ImageDisplay(RawImageWidget):
-    def __init__(self, parent=None, **kargs):
+    def __init__(self,viewer, parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent)
+        self.viewer = viewer
         self.title = 'ImageDisplay'
         self.left = 1
         self.top = 250
         self.maxsize = 768
+        self.viewer.maxsizeText.setText(str(self.maxsize))
         self.minsize = 16
         self.nx = 0
         self.ny = 0
@@ -22,72 +24,18 @@ class ImageDisplay(RawImageWidget):
         self.height = self.maxsize
         self.data = None
         self.datatype = 'none'
-        self.nxText = QLabel()
-        self.nxText.setFixedWidth(50)
-        self.nyText = QLabel()
-        self.nyText.setFixedWidth(50)
-        self.nzText = QLabel()
-        self.nzText.setFixedWidth(50)
-        self.maxsizeText = QLineEdit()
-        self.maxsizeText.setFixedWidth(50)
-        self.maxsizeText.setText(str(self.maxsize))
-        self.widthText = QLabel()
-        self.widthText.setFixedWidth(50)
-        self.widthText.setText(str(self.width))
-        self.heightText = QLabel()
-        self.heightText.setFixedWidth(50)
-        self.heightText.setText(str(self.height))
-        self.imageRateText = QLabel()
         self.lasttime = time.time() -2
         self.nImages = 0
-        self.initUI()
+        self.okToClose = False
+        self.isShow = False
+        self.viewer.maxsizeText.editingFinished.connect(self.maxsizeEvent)
 
-    def createRowWidget(self) :
-        box = QHBoxLayout()
-        maxsizeLabel = QLabel("maxsize:")
-        maxsizeLabel.setFixedWidth(60)
-        box.addWidget(maxsizeLabel)
-        box.addWidget(self.maxsizeText)
-        nxLabel = QLabel("nx:")
-        nxLabel.setFixedWidth(20)
-        self.nxText.setText('0')
-        box.addWidget(nxLabel)
-        box.addWidget(self.nxText)
-        nyLabel = QLabel("ny:")
-        nyLabel.setFixedWidth(20)
-        self.nyText.setText('0')
-        box.addWidget(nyLabel)
-        box.addWidget(self.nyText)
-        nzLabel = QLabel("nz:")
-        nzLabel.setFixedWidth(20)
-        self.nzText.setText('0')
-        box.addWidget(nzLabel)
-        box.addWidget(self.nzText)
-        widthLabel = QLabel("width:")
-        widthLabel.setFixedWidth(40)
-        box.addWidget(widthLabel)
-        box.addWidget(self.widthText)
-        heightLabel = QLabel("height:")
-        heightLabel.setFixedWidth(60)
-        box.addWidget(heightLabel)
-        box.addWidget(self.heightText)
-        imageRateLabel = QLabel("imageRate:")
-        imageRateLabel.setFixedWidth(90)
-        box.addWidget(imageRateLabel)
-        box.addWidget(self.imageRateText)
-        wid =  QWidget()
-        wid.setLayout(box)
-        wid.setFixedHeight(40)
-        return wid
-    
+    def closeEvent(self, event) :
+        if not self.okToClose : event.ignore()
+
     def maxsizeEvent(self) :
         print('maxsize event',flush=True)
-        self.maxsize = int(self.maxsizeText.text())
-
-    def initUI(self):
-        self.maxsizeText.editingFinished.connect(self.maxsizeEvent)
-        self.setGeometry(self.left, self.top, self.width, self.height)
-        self.show()    
+        self.maxsize = int(self.viewer.maxsizeText.text())
 
     def getMaxsize(self) :
         return self.maxsize
@@ -96,7 +44,6 @@ class ImageDisplay(RawImageWidget):
         self.maxsize = maxsize
 
     def newImage(self,value,dimArray):
-        
         image = None
         ny = 0
         nx = 0
@@ -145,13 +92,13 @@ class ImageDisplay(RawImageWidget):
             raise Exception('ny <',self.minsize,' or nx<',self.minsize)
         if nx!=self.nx :
             self.nx = nx
-            self.nxText.setText(str(self.nx))
+            self.viewer.nxText.setText(str(self.nx))
         if ny!=self.ny :
             self.ny = ny
-            self.nyText.setText(str(self.ny))
+            self.viewer.nyText.setText(str(self.ny))
         if nz!=self.nz :
             self.nz = nz
-            self.nzText.setText(str(self.nz))
+            self.viewer.nzText.setText(str(self.nz))
         width = nx
         height = ny
         if width==height :
@@ -170,8 +117,14 @@ class ImageDisplay(RawImageWidget):
             self.width = width
             self.height = height
             self.setGeometry(self.left, self.top, self.width, self.height)
-            self.widthText.setText(str(self.width))
-            self.heightText.setText(str(self.height))
+            self.viewer.widthText.setText(str(self.width))
+            self.viewer.heightText.setText(str(self.height))
+        if not self.isShow :
+            self.setGeometry(self.left, self.top, self.width, self.height)
+            self.viewer.widthText.setText(str(self.width))
+            self.viewer.heightText.setText(str(self.height))
+            self.isShow = True
+            self.show()
         self.setImage(image)
         self.nImages = self.nImages + 1
         self.timenow = time.time()
@@ -180,7 +133,7 @@ class ImageDisplay(RawImageWidget):
         images = self.nImages/timediff
         imgfmt = '{0:.2f}'.format(images)
         text =  imgfmt + "/sec"
-        self.imageRateText.setText(text)
+        self.viewer.imageRateText.setText(text)
         self.lasttime = self.timenow
         self.nImages = 0
 
@@ -200,42 +153,61 @@ class PY_NTNDA_Viewer(QDialog) :
         self.startButton.setEnabled(False)
         self.stopButton = QPushButton('stop')
         self.stopButton.setEnabled(False)
-        self.statusText = QLineEdit()
-        self.initUI()
 
+        self.imageDisplay = None
+        self.statusText = QLineEdit()
+        self.nxText = QLabel()
+        self.nxText.setFixedWidth(50)
+        self.nyText = QLabel()
+        self.nyText.setFixedWidth(50)
+        self.nzText = QLabel()
+        self.nzText.setFixedWidth(50)
+        self.maxsizeText = QLineEdit()
+        self.maxsizeText.setFixedWidth(50)
+        self.widthText = QLabel()
+        self.widthText.setFixedWidth(50)
+        self.heightText = QLabel()
+        self.heightText.setFixedWidth(50)
+        self.imageRateText = QLabel()
+        self.initUI()
+    def closeEvent(self, event) :
+        if not self.channel==None : 
+            event.ignore()
+            return
+        if self.imageDisplay!=None :
+            self.imageDisplay.okToClose = True
+            self.imageDisplay.close()
+        
     def connectEvent(self) :
-        print('connect event',flush=True)
         self.connect()
         self.connectButton.setEnabled(False)
         self.startButton.setEnabled(True)
         self.disconnectButton.setEnabled(True)
 
     def disconnectEvent(self) :
-        print('disconnect event',flush=True)
         self.disconnect()
         self.connectButton.setEnabled(True)
         self.startButton.setEnabled(False)
         self.disconnectButton.setEnabled(False)
 
     def startEvent(self) :
-        print('start event',flush=True)
         self.start()
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
         self.disconnectButton.setEnabled(False)
 
     def stopEvent(self) :
-        print('stop event',flush=True)
         self.stop()
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
         self.disconnectButton.setEnabled(True)
 
     def channelNameEvent(self) :
-        print('channelName event',flush=True)
         self.setChannelName(self.channelNameText.text())
 
     def mycallback(self,arg):
+        if self.imageDisplay==None :
+            self.imageDisplay = ImageDisplay(self)
         value = None
         try:
             value = arg['value'][0]
@@ -264,11 +236,16 @@ class PY_NTNDA_Viewer(QDialog) :
         self.channel.subscribe('mycallback', self.mycallback)
         self.statusText.setText('connecting')
     def start(self) :
+        if self.imageDisplay==None :
+            self.imageDisplay = ImageDisplay(self)
         self.channel.startMonitor('field()')
         self.statusText.setText('starting')
     def disconnect(self) :
         self.channel = None
         self.statusText.setText('disconnecting')
+        self.imageDisplay.okToClose = True
+        self.imageDisplay.close()
+        self.imageDisplay = None
     def stop(self) :
         self.channel.stopMonitor()
         self.statusText.setText('stoping')
@@ -286,7 +263,43 @@ class PY_NTNDA_Viewer(QDialog) :
         wid.setLayout(box)
         wid.setFixedHeight(40)
         self.firstRow = wid
-
+    def createSecondRow(self) :
+        box = QHBoxLayout()
+        maxsizeLabel = QLabel("maxsize:")
+        maxsizeLabel.setFixedWidth(60)
+        box.addWidget(maxsizeLabel)
+        box.addWidget(self.maxsizeText)
+        nxLabel = QLabel("nx:")
+        nxLabel.setFixedWidth(20)
+        self.nxText.setText('0')
+        box.addWidget(nxLabel)
+        box.addWidget(self.nxText)
+        nyLabel = QLabel("ny:")
+        nyLabel.setFixedWidth(20)
+        self.nyText.setText('0')
+        box.addWidget(nyLabel)
+        box.addWidget(self.nyText)
+        nzLabel = QLabel("nz:")
+        nzLabel.setFixedWidth(20)
+        self.nzText.setText('0')
+        box.addWidget(nzLabel)
+        box.addWidget(self.nzText)
+        widthLabel = QLabel("width:")
+        widthLabel.setFixedWidth(40)
+        box.addWidget(widthLabel)
+        box.addWidget(self.widthText)
+        heightLabel = QLabel("height:")
+        heightLabel.setFixedWidth(60)
+        box.addWidget(heightLabel)
+        box.addWidget(self.heightText)
+        imageRateLabel = QLabel("imageRate:")
+        imageRateLabel.setFixedWidth(90)
+        box.addWidget(imageRateLabel)
+        box.addWidget(self.imageRateText)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(40)
+        self.secondRow = wid
     def initUI(self):
         self.connectButton.clicked.connect(self.connectEvent)
         self.disconnectButton.clicked.connect(self.disconnectEvent)
@@ -295,10 +308,10 @@ class PY_NTNDA_Viewer(QDialog) :
         self.channelNameText.editingFinished.connect(self.channelNameEvent)
         self.setGeometry(1, 1, 900, 40)
         self.createFirstRow()
+        self.createSecondRow()
         layout = QGridLayout()
         layout.addWidget(self.firstRow,0,0)
-        self.imageDisplay = ImageDisplay()
-        layout.addWidget(self.imageDisplay.createRowWidget(),1,0)
+        layout.addWidget(self.secondRow,1,0)
         self.statusText.setText('nothing done so far')
         layout.addWidget(self.statusText,2,0)
         self.setLayout(layout)
