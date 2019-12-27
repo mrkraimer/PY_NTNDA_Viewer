@@ -1,7 +1,8 @@
-# PY_NTNDA_Viewer
+# PY_NTNDA_Viewer 2019.12.27
+
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
-What is currently implemented is only a proof of concept.
+What is currently implemented is a working version but stll needs more features
 A later section briefy explains currently planned extensions.
 
 ## Running the example
@@ -23,9 +24,10 @@ For example I start it via
     mrk> python PY_NTNDA_Viewer.py 13SIM1:Pva1:Image
 
 You will see errors if You have not installed all the python packages required.
+If it shows no errors click connect and start.
 
 Then run whatever opi tool you use to control the simDetector.
-Then select all plugins and enable the PVA1 plugin.
+Then select plugins All and enable the PVA1 plugin.
 Then click start.
 
 You should see images being displayed.
@@ -33,20 +35,19 @@ You can also change the region sizes and select the color mode.
 
 ## Remaining work required
 
-### changing region sizes leads to weird behavior
 
-More later.
+1) changing region sizes to non square image can lead to weird behavior
+2) RGB1 works but RGB2 and RGB3 have strange behavior
 
-### Additional Features Desired
+
+## Additional Features Desired
 
 Implement additions features supported by EPICS_NTNDA_Viewer
 
 Amoung these are
 
 1) Add support for other Data Types, currently only uint8 and int8 has been tested
-2) Allow monitoring to be started and stopped.
-3) Allow the channelName to be changed.
-4) Add support for compression
+2) Add support for compression
 
 ### Performance
 
