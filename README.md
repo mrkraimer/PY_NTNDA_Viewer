@@ -46,7 +46,7 @@ Implement additions features supported by EPICS_NTNDA_Viewer
 
 Amoung these are
 
-1) Add support for other Data Types, currently only uint8 and int8 has been tested
+1) Add support for other Data Types, currently only uint8 and int8 work.
 2) Add support for compression
 
 ### Performance
