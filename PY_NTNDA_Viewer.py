@@ -40,7 +40,11 @@ class ImageDisplay(RawImageWidget):
         self.maxsize = maxsize
 
     def setPixelLevels(self,pixelLevels) :
-        self.pixelLevels = make_tuple(pixelLevels)
+        try :
+           temp = make_tuple(pixelLevels)
+           self.pixelLevels = temp
+        except Exception as error:
+           self.viewer.statusText.setText("setPixelLevels error=" + repr(error))
         
     def newImage(self,value,dimArray):
         image = None
