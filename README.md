@@ -1,8 +1,7 @@
-# PY_NTNDA_Viewer 2019.12.27
+# PY_NTNDA_Viewer 2020.01.03
 
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
-What is currently implemented is a working version but stll needs more features
 A later section briefy explains currently planned extensions.
 
 ## Running the example
@@ -28,16 +27,18 @@ If it shows no errors click connect and start.
 
 Then run whatever opi tool you use to control the simDetector.
 Then select plugins All and enable the PVA1 plugin.
-Then click start.
+Then click connect and then start.
 
 You should see images being displayed.
-You can also change the region sizes and select the color mode.
+You can also change the region sizes and select the Color mode and Data type
 
 ## Remaining work required
 
 
-1) changing region sizes to non square image can lead to weird behavior
+1) changing region sizes to non square image is different than EPICS_NTNDA_Viewer.
+I think that EPICS_NTNDA_Viewer works properly.
 2) RGB1 works but RGB2 and RGB3 have strange behavior
+3) Only blosc compression is currently implemented.
 
 
 ## Additional Features Desired
@@ -46,8 +47,9 @@ Implement additions features supported by EPICS_NTNDA_Viewer
 
 Amoung these are
 
-1) Add support for other Data Types, currently only uint8 and int8 work.
-2) Add support for compression
+1) all pixel data types, except float64, appear to work correectly.
+Note that EPICS_NTNDA_Viewer does not appear to work correctly
+2) Currrently only blosc compression is implemented.
 
 ### Performance
 
