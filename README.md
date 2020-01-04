@@ -2,7 +2,6 @@
 
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
-A later section briefy explains currently planned extensions.
 
 ## Running the example
 
@@ -59,7 +58,6 @@ Then select plugins All and enable the PVA1 plugin.
 Then click connect and then start.
 
 You should see images being displayed.
-You can also change the region sizes and select the Color mode and Data type
 
 ## Required python modules
 
@@ -72,7 +70,11 @@ For example I can issue the command
 
     sudo pip install numpy
 
-I think that the following is a complete list of modules required
+The following shows all installed python modules
+
+    pip list
+
+I think that the following is a complete list of modules required by PY_NTNDA_Viewer
 
 1) numpy
 2) PyQt5
@@ -83,19 +85,51 @@ I think that the following is a complete list of modules required
 
 ## Other things to try
 
-**TBD**
-
 ### pixel data types
 
-**TBD**
+In the display manager **simDetector** window try the various **Data type**s.
+The default is **Uint8**.
+
+Now select **Int8**.
+This works just like **Uint8**.
+Note that EPICS_NTNDA_Viewer does not work the same.
+
+Now select **Int16** and also set **Gain** to 255.
+This works. **UInt16** also works.
+
+I also think that **Int32**, **UInt32**,**Int64**,**UInt64**, and **Float32** also work.
+But is is not easy to test.
+
+I think that python does not support **Float64**.
 
 ### color mode
 
-**TBD**
+Set **Data type** to either **Int8** or **Uint8**.
+
+Then set **Color mode** to **RGB1**.
+This works.
+
+**RGB2** and **RGB3** have behavior that looks wrong.
+Needs further investigation.
 
 ### codec
 
-**TBD**
+Set **Data type** to either **Int8** or **Uint8** and
+**Color mode** to **Mono** or **RGB1**
+
+Then select plugins All.
+On the new window set the Port for PVA1 to **CODEC1**.
+Then on the line for CODEC1 click on **More**.
+In the new window set Enable to **Enable**.
+
+You should see what you saw before.
+
+Next select Compressor **Blosc**.
+You should see what you did before.
+But now on the PY_NTNDA_Viewer window you will see that the compressed size is much less
+than the uncompressed size.
+
+
 
 ## Remaining work required
 
@@ -105,16 +139,6 @@ I think that EPICS_NTNDA_Viewer works properly.
 2) RGB1 works but RGB2 and RGB3 have strange behavior
 3) Only blosc compression is currently implemented.
 
-
-## Additional Features Desired
-
-Implement additions features supported by EPICS_NTNDA_Viewer
-
-Amoung these are
-
-1) all pixel data types, except float64, appear to work correectly.
-Note that EPICS_NTNDA_Viewer does not appear to work correctly
-2) Currrently only blosc compression is implemented.
 
 ### Performance
 
