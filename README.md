@@ -97,7 +97,7 @@ Note that EPICS_NTNDA_Viewer does not work the same.
 Now select **Int16** and also set **Gain** to 255.
 This works. **UInt16** also works.
 
-I also think that **Int32**, **UInt32**,**Int64**,**UInt64**, and **Float32** also work.
+I think that **Int32**, **UInt32**, **Int64**, **UInt64**, and **Float32** also work.
 But is is not easy to test.
 
 I think that python does not support **Float64**.
@@ -125,8 +125,8 @@ In the new window set Enable to **Enable**.
 You should see what you saw before.
 
 Next select Compressor **Blosc**.
-You should see what you did before.
-But now on the PY_NTNDA_Viewer window you will see that the compressed size is much less
+You should see what you did before,
+except that on the PY_NTNDA_Viewer window you will see that the compressed size is much less
 than the uncompressed size.
 
 
@@ -135,7 +135,7 @@ than the uncompressed size.
 
 
 1) changing region sizes to non square image is different than EPICS_NTNDA_Viewer.
-I think that EPICS_NTNDA_Viewer works properly.
+I think that EPICS_NTNDA_Viewer has the correct behavior.
 2) RGB1 works but RGB2 and RGB3 have strange behavior
 3) Only blosc compression is currently implemented.
 
