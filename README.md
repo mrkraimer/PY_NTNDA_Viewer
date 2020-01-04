@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.01.03
+# PY_NTNDA_Viewer 2020.01.04
 
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
@@ -8,12 +8,41 @@ A later section briefy explains currently planned extensions.
 
 Note that my computer is using fedora 30, which also means python3.
 
+### Starting simDetector
+
 Start an IOC running the simDetector.
 For example I start it as follows
 
     mrk> pwd
     /home/epics7/areaDetector/ADSimDetector/iocs/simDetectorIOC/iocBoot/iocSimDetector
     mrk> ./start_epics
+
+### Start a display manager
+
+At least the following choices are available: **medm**, **edm**, **pydm**, and **css**.
+For any choice the display file, with name **simDetector**, to load is located in
+**areaDetector/ADSimDetector/simDetectorApp/op**
+
+For example to use **medm** I have the files **setEnv** and **startSimDetector**, which are:
+
+    export PATH=$PATH:/home/epics7/extensions/bin/${EPICS_HOST_ARCH}
+    export EPICS_DISPLAY_PATH=/home/epics7/areaDetector/ADCore/ADApp/op/adl
+    export EPICS_DISPLAY_PATH=${EPICS_DISPLAY_PATH}:/home/epics7/areaDetector/pvaDriver/pvaDriverApp/op/adl
+    export EPICS_DISPLAY_PATH=${EPICS_DISPLAY_PATH}:/home/epics7/areaDetector/ADSimDetector/simDetectorApp/op/adl
+    export EPICS_CA_MAX_ARRAY_BYTES=40000000
+
+and
+
+    source ./setEnv
+    medm  -x -macro "P=13SIM1:,R=cam1:" simDetector.adl 
+
+then I just enter
+
+    ./startSimDetector
+
+
+
+### start PY_NTNDA_Viewer
 
 Then start the viewer.
 For example I start it via
@@ -31,6 +60,42 @@ Then click connect and then start.
 
 You should see images being displayed.
 You can also change the region sizes and select the Color mode and Data type
+
+## Required python modules
+
+You must have python and pip installed.
+I am using ferora core 30 and it has python3 and pip3 installed.
+
+The other python modules can be installed via **pip install ...**
+
+For example I can issue the command
+
+    sudo pip install numpy
+
+I think that the following is a complete list of modules required
+
+1) numpy
+2) PyQt5
+3) PyQt5-sip
+4) pvapy
+5) pyqtgraph
+6) blosc
+
+## Other things to try
+
+**TBD**
+
+### pixel data types
+
+**TBD**
+
+### color mode
+
+**TBD**
+
+### codec
+
+**TBD**
 
 ## Remaining work required
 
