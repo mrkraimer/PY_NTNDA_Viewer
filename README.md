@@ -1,7 +1,18 @@
-# PY_NTNDA_Viewer 2020.01.04
-
+# PY_NTNDA_Viewer 2020.01.06
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
+
+## Status
+
+The current version works but still has problems.
+
+### Remaining work required
+
+1) See the issues for some of the known problems.
+2) changing region sizes to a non square image is different than EPICS_NTNDA_Viewer.
+3) RGB1 works but RGB2 and RGB3 have strange behavior
+4) Only blosc compression is currently implemented.
+
 
 ## Running the example
 
@@ -43,7 +54,6 @@ then I just enter
 
 ### start PY_NTNDA_Viewer
 
-Then start the viewer.
 For example I start it via
 
     mrk> pwd
@@ -74,14 +84,18 @@ The following shows all installed python modules
 
     pip list
 
-I think that the following is a complete list of modules required by PY_NTNDA_Viewer
+The following is a list of modules required by PY_NTNDA_Viewer
 
 1) numpy
 2) PyQt5
 3) PyQt5-sip
-4) pvapy
-5) pyqtgraph
-6) blosc
+4) QtPy
+5) pvapy
+6) pyqtgraph
+7) blosc
+
+But when Mark Rivers tried PY_NTNDA_Viewer, he found other problems with his python setup.
+He did resolve his problems and got it to work.
 
 ## Other things to try
 
@@ -92,7 +106,6 @@ The default is **Uint8**.
 
 Now select **Int8**.
 This works just like **Uint8**.
-Note that EPICS_NTNDA_Viewer does not work the same.
 
 Now select **Int16** and also set **Gain** to 255.
 This works. **UInt16** also works.
@@ -100,7 +113,8 @@ This works. **UInt16** also works.
 I think that **Int32**, **UInt32**, **Int64**, **UInt64**, and **Float32** also work.
 But is is not easy to test.
 
-I think that python does not support **Float64**.
+I think that python does not support **Float64**, but not sure that this is true.
+
 
 ### color mode
 
@@ -130,20 +144,11 @@ except that on the PY_NTNDA_Viewer window you will see that the compressed size 
 than the uncompressed size.
 
 
-
-## Remaining work required
-
-
-1) changing region sizes to non square image is different than EPICS_NTNDA_Viewer.
-I think that EPICS_NTNDA_Viewer has the correct behavior.
-2) RGB1 works but RGB2 and RGB3 have strange behavior
-3) Only blosc compression is currently implemented.
-
-
 ### Performance
 
 I set acquire period to .001 (it was initially .005)
 EPICS_NTDA_Viewer could only do about 140 frames/second
 PY_NTDA_Viewer does about 330 frames/second.
 
-EPICS_NTNDA_Viewer uses MORE CPU then PY_NTNDA_Viewer.
+Mark Rivers reports diffenent results.
+
