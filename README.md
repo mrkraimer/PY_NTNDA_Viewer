@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.01.06
+# PY_NTNDA_Viewer 2020.01.08
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -110,10 +110,8 @@ This works just like **Uint8**.
 Now select **Int16** and also set **Gain** to 255.
 This works. **UInt16** also works.
 
-I think that **Int32**, **UInt32**, **Int64**, **UInt64**, and **Float32** also work.
+I think that **Int32**, **UInt32**, **Int64**, **UInt64**, **Float32**, and **Float64** also work.
 But is is not easy to test.
-
-I think that python does not support **Float64**, but not sure that this is true.
 
 
 ### color mode

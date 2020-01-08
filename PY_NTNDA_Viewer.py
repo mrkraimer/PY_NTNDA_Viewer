@@ -14,7 +14,7 @@ from ast import literal_eval as make_tuple
 
 class ImageDisplay(RawImageWidget):
     def __init__(self,viewer, parent=None, **kargs):
-        RawImageWidget.__init__(self, parent=parent)
+        RawImageWidget.__init__(self, parent=parent,scaled=True)
         self.viewer = viewer
         self.setWindowTitle('ImageDisplay')
         self.left = 1
@@ -100,8 +100,7 @@ class ImageDisplay(RawImageWidget):
             elif datatype==str("float32") :
                 self.pixelLevels = (float(0.0),float(1.0))
             elif datatype==str("float64") :
-                raise Exception('float64 is not supported')
-                return
+                self.pixelLevels = (float(0.0),float(1.0))
             else :
                 raise Exception('unknown datatype' + datatype)
                 return
