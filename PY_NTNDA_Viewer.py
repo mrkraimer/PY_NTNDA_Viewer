@@ -76,7 +76,7 @@ class ImageDisplay(RawImageWidget):
                 ny = dimArray[1]["size"]
             else  :  raise Exception('no dim = 3')
             datatype = str(data.dtype)
-            image = data.reshape((nx,ny,nz))
+            image = data.reshape((ny,nx,nz))
             image = image.transpose(1,0,2)
         else :
             raise Exception('ndim not 2 or 3')
