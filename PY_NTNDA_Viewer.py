@@ -59,7 +59,7 @@ class ImageDisplay(RawImageWidget):
             nx = dimArray[0]["size"]
             ny = dimArray[1]["size"]
             datatype = str(data.dtype)
-            image = data.reshape(nx,ny)
+            image = data.reshape(ny,nx)
             image = image.transpose()
         elif ndim ==3 :
             if dimArray[0]["size"]==3 :
