@@ -56,10 +56,11 @@ class ImageDisplay(RawImageWidget):
         nz = 1
         ndim = len(dimArray)
         if ndim ==2 :
-            ny = dimArray[1]["size"]
             nx = dimArray[0]["size"]
+            ny = dimArray[1]["size"]
             datatype = str(data.dtype)
             image = data.reshape(nx,ny)
+            image = image.transpose()
         elif ndim ==3 :
             if dimArray[0]["size"]==3 :
                 nz = dimArray[0]["size"]
@@ -75,7 +76,8 @@ class ImageDisplay(RawImageWidget):
                 ny = dimArray[1]["size"]
             else  :  raise Exception('no dim = 3')
             datatype = str(data.dtype)
-            image = data.reshape(ny,nx,nz)
+            image = data.reshape((nx,ny,nz))
+            image = image.transpose(1,0,2)
         else :
             raise Exception('ndim not 2 or 3')
         if datatype!=self.datatype :
@@ -147,7 +149,7 @@ class ImageDisplay(RawImageWidget):
         imgfmt = '{0:.2f}'.format(images)
         text =  imgfmt + "/sec"
         self.viewer.imageRateText.setText(text)
-        self.lasttime = self.timenow
+        self.lasttime = self.timenow 
         self.nImages = 0
 
 class PY_NTNDA_Viewer(QWidget) :
