@@ -1,19 +1,11 @@
-# PY_NTNDA_Viewer 2020.01.09
+# PY_NTNDA_Viewer 2020.01.10
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
 ## Status
 
 The current version works but still has problems.
-This version does appear to fix issue #2
-
-### Remaining work required
-
-1) See the issues for some of the known problems.
-2) changing region sizes to a non square image does not work
-3) RGB1 works but RGB2 and RGB3 have strange behavior
-4) Only blosc compression is currently implemented.
-
+See the issues for details.
 
 ## Running the example
 
