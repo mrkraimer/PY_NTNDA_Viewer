@@ -75,14 +75,20 @@ class ImageDisplay(RawImageWidget):
                 ny = dimArray[2]["size"]
                 newdata = np.array(data)
                 indnew = 0
+                redin = 0
+                greenin = 0
+                bluein = 0
                 for indy in range(ny) :
-                    offset = indy*nx*nz
-                    for indx in range(nx) :
-                        newdata[indnew] = data[offset]
-                        newdata[indnew+1] = data[offset+nx]
-                        newdata[indnew+2] = data[offset+nx+nx]
-                        indnew += 3
-                        offset += 1
+                    redin = indy*nx*nz
+                    greenin = redin + nx
+                    bluein = greenin + nx
+                    for col in range(nx) :
+                        newdata[indnew] = data[redin]
+                        indnew += 1; redin += 1
+                        newdata[indnew] = data[greenin]
+                        indnew += 1; greenin +=1
+                        newdata[indnew] = data[bluein]
+                        indnew += 1; bluein += 1
                 data = newdata
             elif dimArray[2]["size"]==3 :
                 nz = dimArray[2]["size"]
