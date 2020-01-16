@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.01.10
+# PY_NTNDA_Viewer 2020.01.16
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -85,7 +85,7 @@ The following is a list of modules required by PY_NTNDA_Viewer
 4) QtPy
 5) pvapy
 6) pyqtgraph
-7) blosc
+7) imagecodecs
 
 But when Mark Rivers tried PY_NTNDA_Viewer, he found other problems with his python setup.
 He did resolve his problems and got it to work.
@@ -111,16 +111,12 @@ But is is not easy to test.
 
 Set **Data type** to either **Int8** or **Uint8**.
 
-Then set **Color mode** to **RGB1**.
-This works.
-
-**RGB2** and **RGB3** does not work
-Needs further investigation.
+Then set **Color mode** to **Mono** or **RGB1** or **RGB2** or **RGB3** 
+These should all work.
 
 ### codec
 
-Set **Data type** to either **Int8** or **Uint8** and
-**Color mode** to **Mono** or **RGB1**
+Set **Data type** to either **Int8** or **Uint8** and **Color mode** to any type
 
 Then select plugins All.
 On the new window set the Port for PVA1 to **CODEC1**.
@@ -129,7 +125,7 @@ In the new window set Enable to **Enable**.
 
 You should see what you saw before.
 
-Next select Compressor **Blosc**.
+Next select Compressor to anything except **BSLZ4**.
 You should see what you did before,
 except that on the PY_NTNDA_Viewer window you will see that the compressed size is much less
 than the uncompressed size.

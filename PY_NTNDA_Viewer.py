@@ -8,7 +8,9 @@ from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
-import blosc
+import imagecodecs
+
+
 
 from ast import literal_eval as make_tuple
 
@@ -53,43 +55,54 @@ class ImageDisplay(RawImageWidget):
         ny = 0
         nx = 0
         nz = 1
-        ndim = len(dimArray)
-        if ndim!=2 and ndim!=3 :
-            raise Exception('ndim not 2 or 3')
-            return
         datatype = str(image.dtype)
-        if ndim ==2 :
-            nx = dimArray[0]["size"]
-            ny = dimArray[1]["size"]
-            image = np.reshape(image,(ny,nx))
-            image = np.transpose(image)
-        elif ndim ==3 :
-            if dimArray[0]["size"]==3 :
-                nz = dimArray[0]["size"]
-                nx = dimArray[1]["size"]
-                ny = dimArray[2]["size"]
-                image = np.reshape(image,(ny,nx,nz))
+        if dimArray == None :
+            shape = image.shape
+            ny = shape[0]
+            nx = shape[1]
+            if len(shape)==2 : 
+                image = np.transpose(image)
+            else :
+                nz = shape[2]
                 image = np.transpose(image,(1,0,2))
-            elif dimArray[1]["size"]==3 :
-                nz = dimArray[1]["size"]
-                nx = dimArray[0]["size"]
-                ny = dimArray[2]["size"]
-                image = np.reshape(image,(ny,nz,nx))
-                image = np.swapaxes(image,2,1)
-                image = np.transpose(image,(1,0,2))
-            elif dimArray[2]["size"]==3 :
-                nz = dimArray[2]["size"]
+        else :
+            ndim = len(dimArray)
+            if ndim!=2 and ndim!=3 :
+                raise Exception('ndim not 2 or 3')
+                return
+            if ndim ==2 :
                 nx = dimArray[0]["size"]
                 ny = dimArray[1]["size"]
-                image = np.reshape(image,(nz,ny,nx))
-                image = np.swapaxes(image,0,2)
-                image = np.swapaxes(image,0,1)
-                image = np.transpose(image,(1,0,2))
-            else  :  
-                raise Exception('no dim = 3')
-                return
-        else :
-            raise Exception('ndim not 2 or 3')
+                image = np.reshape(image,(ny,nx))
+                image = np.transpose(image)
+            elif ndim ==3 :
+                if dimArray[0]["size"]==3 :
+                    nz = dimArray[0]["size"]
+                    nx = dimArray[1]["size"]
+                    ny = dimArray[2]["size"]
+                    image = np.reshape(image,(ny,nx,nz))
+                    image = np.transpose(image,(1,0,2))
+                elif dimArray[1]["size"]==3 :
+                    nz = dimArray[1]["size"]
+                    nx = dimArray[0]["size"]
+                    ny = dimArray[2]["size"]
+                    image = np.reshape(image,(ny,nz,nx))
+                    image = np.swapaxes(image,2,1)
+                    image = np.transpose(image,(1,0,2))
+                elif dimArray[2]["size"]==3 :
+                    nz = dimArray[2]["size"]
+                    nx = dimArray[0]["size"]
+                    ny = dimArray[1]["size"]
+                    image = np.reshape(image,(nz,ny,nx))
+                    image = np.swapaxes(image,0,2)
+                    image = np.swapaxes(image,0,1)
+                    image = np.transpose(image,(1,0,2))
+                else  :  
+                    raise Exception('no axis has dim = 3')
+                    return
+            else :
+                raise Exception('ndim not 2 or 3')
+
         if datatype!=self.datatype :
             self.datatype = datatype
             self.viewer.dtypeText.setText(self.datatype)
@@ -269,54 +282,65 @@ class PY_NTNDA_Viewer(QWidget) :
         except Exception as error:
             self.statusText.setText(repr(error))
             return
-        if len(value) != 1 :
-            self.statusText.setText('value length not 1')
-            return
-        element = None
-        for x in value :
-            element = x
-        if element == None : 
-            self.statusText.setText('value is not numpyarray')
-        else :
-            data = value[element]
-        codec = arg['codec']
-        codecName = codec['name']
-        if len(codecName) == 0 :
-            self.codecNameText.setText('none')
-            size =  len(data)
-            self.compressedSizeText.setText(str(size))
-            self.uncompressedSizeText.setText(str(size))
-        else :
-            self.codecNameText.setText(codecName)
-            datatype = str(data.dtype)
-            if codecName=='blosc' :
-                if datatype!="int8" and datatype!="uint8" :
-                    self.statusText.setText('blosc codec only supported for byte arrays')
-                    return    
-                compressed = len(data)          
-                decompress = blosc.decompress(data,as_bytearray=True)
-                data = np.array(decompress)
-                uncompressed = len(data)
-                self.compressedSizeText.setText(str(compressed))
-                self.uncompressedSizeText.setText(str(uncompressed))
-            elif codecName=='jpeg' :
-                self.statusText.setText('jpeg codec not yet supported')
+        try :
+            if len(value) != 1 :
+                self.statusText.setText('value length not 1')
                 return
-            elif codecName=='lz4' :
-                self.statusText.setText('lz4 codec not yet supported')
-                return
-            elif codecName=='bslz4' :
-                self.statusText.setText('bslz4 codec not yet supported')
-                return
+            element = None
+            for x in value :
+                element = x
+            if element == None : 
+                self.statusText.setText('value is not numpyarray')
             else :
-                self.statusText.setText(codecName + " is unsupported codec")
-                return    
+                data = value[element]
+        except Exception as error:
+            self.statusText.setText(repr(error))
+            return
         dimArray = None
         try:
             dimArray = arg['dimension']
         except Exception as error:
             self.statusText.setText(repr(error))
             return
+        compressed = len(data)
+        uncompressed = len(data)
+        codec = arg['codec']
+        codecName = codec['name']
+        parameters = codec['parameters']
+        typevalue = parameters[0]['value']
+        if typevalue== 1 : datatype = "int8"
+        elif typevalue== 2 : datatype = "int16"
+        elif typevalue== 3 : datatype = "int32"
+        elif typevalue== 4 : datatype = "int64"
+        elif typevalue== 5 : datatype = "uint8"
+        elif typevalue== 6 : datatype = "uint16"
+        elif typevalue== 7 : datatype = "uint32"
+        elif typevalue== 8 : datatype = "uint64"
+        elif typevalue== 9 : datatype = "float32"
+        elif typevalue== 10 : datatype = "float64"
+        else : raise Exception('mapIntToType')
+        if len(codecName) == 0 : codecName = 'none'
+        else :
+            if codecName=='blosc' : 
+                data = imagecodecs.blosc_decode(data)
+                data = np.frombuffer(data,dtype=datatype)
+            elif codecName=='lz4' :
+                data = imagecodecs.lz4_decode(data)
+                data = np.frombuffer(data,dtype=datatype)
+            elif codecName=='bslz4' :
+                data = imagecodecs.bitshuffle_decode(data)
+                data = imagecodecs.lz4_decode(data)
+                data = np.array(data)
+            elif codecName=='jpeg' :
+                data = imagecodecs.jpeg8_decode(data)
+                dimArray = None
+            else :
+                self.statusText.setText(codecName + " is unsupported codec")
+                return
+            uncompressed = len(data)
+        self.codecNameText.setText(codecName)
+        self.compressedSizeText.setText(str(compressed))
+        self.uncompressedSizeText.setText(str(uncompressed))
         self.event.wait()
         try:
             self.imageDisplay.newImage(data,dimArray)
