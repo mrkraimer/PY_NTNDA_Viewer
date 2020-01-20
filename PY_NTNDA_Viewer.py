@@ -328,9 +328,8 @@ class PY_NTNDA_Viewer(QWidget) :
                 data = imagecodecs.lz4_decode(data)
                 data = np.frombuffer(data,dtype=datatype)
             elif codecName=='bslz4' :
-                data = imagecodecs.bitshuffle_decode(data)
-                data = imagecodecs.lz4_decode(data)
-                data = np.array(data)
+                self.statusText.setText('bslz4 is not implemented. See issue #9 for details')
+                return
             elif codecName=='jpeg' :
                 data = imagecodecs.jpeg8_decode(data)
                 dimArray = None
