@@ -8,8 +8,10 @@ from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
-import imagecodecs
-
+import ctypes
+import ctypes.util
+import os
+import pdb
 
 
 from ast import literal_eval as make_tuple
@@ -56,51 +58,41 @@ class ImageDisplay(RawImageWidget):
         nx = 0
         nz = 1
         datatype = str(image.dtype)
-        if dimArray == None :
-            shape = image.shape
-            ny = shape[0]
-            nx = shape[1]
-            if len(shape)==2 : 
-                image = np.transpose(image)
-            else :
-                nz = shape[2]
+        ndim = len(dimArray)
+        if ndim!=2 and ndim!=3 :
+            raise Exception('ndim not 2 or 3')
+            return
+        if ndim ==2 :
+            nx = dimArray[0]["size"]
+            ny = dimArray[1]["size"]
+            image = np.reshape(image,(ny,nx))
+            image = np.transpose(image)
+        elif ndim ==3 :
+            if dimArray[0]["size"]==3 :
+                nz = dimArray[0]["size"]
+                nx = dimArray[1]["size"]
+                ny = dimArray[2]["size"]
+                image = np.reshape(image,(ny,nx,nz))
                 image = np.transpose(image,(1,0,2))
-        else :
-            ndim = len(dimArray)
-            if ndim!=2 and ndim!=3 :
-                raise Exception('ndim not 2 or 3')
-                return
-            if ndim ==2 :
+            elif dimArray[1]["size"]==3 :
+                nz = dimArray[1]["size"]
+                nx = dimArray[0]["size"]
+                ny = dimArray[2]["size"]
+                image = np.reshape(image,(ny,nz,nx))
+                image = np.swapaxes(image,2,1)
+                image = np.transpose(image,(1,0,2))
+            elif dimArray[2]["size"]==3 :
+                nz = dimArray[2]["size"]
                 nx = dimArray[0]["size"]
                 ny = dimArray[1]["size"]
-                image = np.reshape(image,(ny,nx))
-                image = np.transpose(image)
-            elif ndim ==3 :
-                if dimArray[0]["size"]==3 :
-                    nz = dimArray[0]["size"]
-                    nx = dimArray[1]["size"]
-                    ny = dimArray[2]["size"]
-                    image = np.reshape(image,(ny,nx,nz))
-                    image = np.transpose(image,(1,0,2))
-                elif dimArray[1]["size"]==3 :
-                    nz = dimArray[1]["size"]
-                    nx = dimArray[0]["size"]
-                    ny = dimArray[2]["size"]
-                    image = np.reshape(image,(ny,nz,nx))
-                    image = np.swapaxes(image,2,1)
-                    image = np.transpose(image,(1,0,2))
-                elif dimArray[2]["size"]==3 :
-                    nz = dimArray[2]["size"]
-                    nx = dimArray[0]["size"]
-                    ny = dimArray[1]["size"]
-                    image = np.reshape(image,(nz,ny,nx))
-                    image = np.swapaxes(image,0,2)
-                    image = np.swapaxes(image,0,1)
-                    image = np.transpose(image,(1,0,2))
-                else  :  
-                    raise Exception('no axis has dim = 3')
-                    return
-            else :
+                image = np.reshape(image,(nz,ny,nx))
+                image = np.swapaxes(image,0,2)
+                image = np.swapaxes(image,0,1)
+                image = np.transpose(image,(1,0,2))
+            else  :  
+                raise Exception('no axis has dim = 3')
+                return
+        else :
                 raise Exception('ndim not 2 or 3')
 
         if datatype!=self.datatype :
@@ -175,6 +167,21 @@ class ImageDisplay(RawImageWidget):
         self.lasttime = self.timenow 
         self.nImages = 0
 
+class FindLibrary(object) :
+    def __init__(self, parent=None):
+        self.save = dict()
+    def find(self,name) :
+        lib = self.save.get(name)
+        if lib!=None : return lib
+        result = ctypes.util.find_library(name)
+        if result==None : return None
+        if os.name == 'nt':
+            lib = ctypes.windll.LoadLibrary(result)
+        else :
+            lib = ctypes.cdll.LoadLibrary(result)
+        if lib!=None : self.save.update({name : lib})
+        return lib
+
 class PY_NTNDA_Viewer(QWidget) :
     def __init__(self,channelName, parent=None):
         super(QWidget, self).__init__(parent)
@@ -182,6 +189,8 @@ class PY_NTNDA_Viewer(QWidget) :
         self.event = threading.Event()
         self.event.set()
         self.setWindowTitle("PY_NTNDA_Viewer")
+        self.findLibrary = FindLibrary()
+        self.libPath = '/home/epics7/areaDetector/ADSupport/lib/linux-x86_64/'
 # first row
         self.connectButton = QPushButton('connect')
         self.connectButton.setEnabled(True)
@@ -302,41 +311,69 @@ class PY_NTNDA_Viewer(QWidget) :
         except Exception as error:
             self.statusText.setText(repr(error))
             return
-        compressed = len(data)
-        uncompressed = len(data)
+        compressed = arg['compressedSize']
+        uncompressed = arg['uncompressedSize']
         codec = arg['codec']
         codecName = codec['name']
         parameters = codec['parameters']
         typevalue = parameters[0]['value']
-        if typevalue== 1 : datatype = "int8"
-        elif typevalue== 2 : datatype = "int16"
-        elif typevalue== 3 : datatype = "int32"
-        elif typevalue== 4 : datatype = "int64"
-        elif typevalue== 5 : datatype = "uint8"
-        elif typevalue== 6 : datatype = "uint16"
-        elif typevalue== 7 : datatype = "uint32"
-        elif typevalue== 8 : datatype = "uint64"
-        elif typevalue== 9 : datatype = "float32"
-        elif typevalue== 10 : datatype = "float64"
+        if typevalue== 1 : datatype = "int8"; elementsize =1
+        elif typevalue== 2 : datatype = "int16"; elementsize =2
+        elif typevalue== 3 : datatype = "int32"; elementsize =4
+        elif typevalue== 4 : datatype = "int64"; elementsize =8
+        elif typevalue== 5 : datatype = "uint8"; elementsize =1
+        elif typevalue== 6 : datatype = "uint16"; elementsize =2
+        elif typevalue== 7 : datatype = "uint32"; elementsize =4
+        elif typevalue== 8 : datatype = "uint64"; elementsize =8
+        elif typevalue== 9 : datatype = "float32"; elementsize =4
+        elif typevalue== 10 : datatype = "float64"; elementsize =8
         else : raise Exception('mapIntToType')
-        if len(codecName) == 0 : codecName = 'none'
+        if len(codecName) == 0 : 
+            codecName = 'none'
+            compressed = uncompressed
         else :
+            if codecName=='blosc':
+                lib = self.findLibrary.find(codecName)
+            elif codecName=='jpeg' :
+                lib = self.findLibrary.find('decompressJPEG')
+            elif codecName=='lz4' or codecName=='bslz4' :
+                lib = self.findLibrary.find('bitshuffle')
+            else : lib = None
+            if lib==None :
+                self.statusText.setText('shared library ' +codecName + ' not found')
+                return
+            inarray = bytearray(data)
+            in_char_array = ctypes.c_ubyte * compressed
+            out_char_array = ctypes.c_ubyte * uncompressed
+            outarray = bytearray(uncompressed)
             if codecName=='blosc' : 
-                data = imagecodecs.blosc_decode(data)
+                lib.blosc_decompress(
+                     in_char_array.from_buffer(inarray),
+                     out_char_array.from_buffer(outarray),uncompressed)
+                data = np.array(outarray)
                 data = np.frombuffer(data,dtype=datatype)
             elif codecName=='lz4' :
-                data = imagecodecs.lz4_decode(data)
+                lib.LZ4_decompress_fast(
+                     in_char_array.from_buffer(inarray),
+                     out_char_array.from_buffer(outarray),uncompressed)
+                data = np.array(outarray)
                 data = np.frombuffer(data,dtype=datatype)
             elif codecName=='bslz4' :
-                self.statusText.setText('bslz4 is not implemented. See issue #9 for details')
-                return
+                lib.bshuf_decompress_lz4(
+                     in_char_array.from_buffer(inarray),
+                     out_char_array.from_buffer(outarray),int(uncompressed/elementsize),
+                     elementsize,0)
+                data = np.array(outarray)
+                data = np.frombuffer(data,dtype=datatype)
             elif codecName=='jpeg' :
-                data = imagecodecs.jpeg8_decode(data)
-                dimArray = None
+                lib.decompressJPEG(
+                     in_char_array.from_buffer(inarray),compressed,
+                     out_char_array.from_buffer(outarray),uncompressed)
+                data = np.array(outarray)
+                data = data.flatten()
             else :
                 self.statusText.setText(codecName + " is unsupported codec")
                 return
-            uncompressed = len(data)
         self.codecNameText.setText(codecName)
         self.compressedSizeText.setText(str(compressed))
         self.uncompressedSizeText.setText(str(uncompressed))

@@ -1,11 +1,10 @@
-# PY_NTNDA_Viewer 2020.01.16
+# PY_NTNDA_Viewer 2020.01.21
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
 ## Status
 
-The current version works but still has problems.
-See the issues for details.
+The current version works but I still want to make some appearance changes.
 
 ## Running the example
 
@@ -47,11 +46,21 @@ then I just enter
 
 ### start PY_NTNDA_Viewer
 
-For example I start it via
+In order to use the codec support from **areaDetector** you must have
+a path to **areaDetector/ADSupport/lib...** defined.
+The details differ between windows and linux or macos.
+
+An example is **exampleStart**
+
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/epics7/areaDetector/ADSupport/lib/linux-x86_64
+    python PY_NTNDA_Viewer.py 13SIM1:Pva1:Image
+
+
+I start it via
 
     mrk> pwd
     /home/epics7/modules/PY_NTNDA_Viewer
-    mrk> python PY_NTNDA_Viewer.py 13SIM1:Pva1:Image
+    mrk> ./exampleStart
 
 You will see errors if You have not installed all the python packages required.
 If it shows no errors click connect and start.
@@ -85,7 +94,6 @@ The following is a list of modules required by PY_NTNDA_Viewer
 4) QtPy
 5) pvapy
 6) pyqtgraph
-7) imagecodecs
 
 But when Mark Rivers tried PY_NTNDA_Viewer, he found other problems with his python setup.
 He did resolve his problems and got it to work.
@@ -125,7 +133,7 @@ In the new window set Enable to **Enable**.
 
 You should see what you saw before.
 
-Next select Compressor to anything except **BSLZ4**.
+Next select Compressor.
 You should see what you did before,
 except that on the PY_NTNDA_Viewer window you will see that the compressed size is much less
 than the uncompressed size.
