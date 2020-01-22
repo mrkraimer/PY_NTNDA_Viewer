@@ -11,10 +11,8 @@ from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 import ctypes
 import ctypes.util
 import os
-import pdb
 
-
-from ast import literal_eval as make_tuple
+#from ast import literal_eval as make_tuple
 
 class ImageDisplay(RawImageWidget):
     def __init__(self,viewer, parent=None, **kargs):
@@ -167,6 +165,19 @@ class ImageDisplay(RawImageWidget):
         self.lasttime = self.timenow 
         self.nImages = 0
 
+class GetChannel(object) :
+    '''
+       This exists because whenever a new channel was started a crask occured
+    '''
+    def __init__(self, parent=None):
+        self.save = dict()
+    def get(self,channelName) :
+        channel = self.save.get(channelName)
+        if channel!=None : return channel
+        channel = Channel(channelName)
+        self.save.update({channelName : channel})
+        return channel
+
 class FindLibrary(object) :
     def __init__(self, parent=None):
         self.save = dict()
@@ -189,22 +200,18 @@ class PY_NTNDA_Viewer(QWidget) :
         self.event = threading.Event()
         self.event.set()
         self.setWindowTitle("PY_NTNDA_Viewer")
+        self.getChannel = GetChannel()
         self.findLibrary = FindLibrary()
-        self.libPath = '/home/epics7/areaDetector/ADSupport/lib/linux-x86_64/'
 # first row
-        self.connectButton = QPushButton('connect')
-        self.connectButton.setEnabled(True)
-        self.disconnectButton = QPushButton('disconnect')
-        self.disconnectButton.setEnabled(False)
         self.startButton = QPushButton('start')
-        self.startButton.setEnabled(False)
+        self.startButton.setEnabled(True)
         self.stopButton = QPushButton('stop')
         self.stopButton.setEnabled(False)
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
         
         self.channel = None
-        self.isConnected = False
+        self.isStarted = False
 # second row
         self.maxsizeText = QLineEdit()
         self.maxsizeText.setFixedWidth(50)
@@ -230,26 +237,18 @@ class PY_NTNDA_Viewer(QWidget) :
         self.clearButton = QPushButton('clear')
         self.clearButton.setEnabled(True)
         self.statusText = QLineEdit()
-# imageDisplay
-        self.imageDisplay = None
 # initialize
         self.initUI()
 
     def closeEvent(self, event) :
-        if self.isConnected : 
-            self.statusText.setText('PY_NTNDA_Viewer can only be closed when disconnected')
+        if self.isStarted : 
+            self.statusText.setText('PY_NTNDA_Viewer can only be closed when stopped')
             event.ignore()
             return
         if self.imageDisplay!=None :
             self.imageDisplay.okToClose = True
             self.imageDisplay.close()
         
-    def connectEvent(self) :
-        self.connect()
-
-    def disconnectEvent(self) :
-        self.disconnect()
-
     def startEvent(self) :
         self.start()
 
@@ -384,57 +383,27 @@ class PY_NTNDA_Viewer(QWidget) :
             self.statusText.setText(repr(error))
         self.event.set()
 
-    def connect(self) :
-        self.channelNameText.setEnabled(False)
-        self.channel = Channel(self.channelName)
-        self.channel.subscribe('PY_NTNDA_Viewer', self.mycallback)
-        self.statusText.setText('connecting')
-        self.connectButton.setEnabled(False)
-        self.startButton.setEnabled(True)
-        self.disconnectButton.setEnabled(True)
-        self.isConnected = True
-        
     def start(self) :
-        self.channel.setTimeout(1.0)
-        isConnected = True
-        try :
-            introdict = self.channel.getIntrospectionDict()
-        except :
-            isConnected = False
-        if isConnected :
-            self.channel.startMonitor('field()')
-            self.statusText.setText('starting')
-            self.startButton.setEnabled(False)
-            self.stopButton.setEnabled(True)
-            self.disconnectButton.setEnabled(False)
-            self.pixelLevelsText.setEnabled(True)
-            return
-        self.statusText.setText('start failed because not connected')
-        
-
-    def disconnect(self) :
-        if self.channel!=None :
-            self.channel.unsubscribe('PY_NTNDA_Viewer')
-            self.channel = None
-        self.statusText.setText('disconnecting')
-        self.channelNameText.setEnabled(True)
-        self.connectButton.setEnabled(True)
+        self.channelNameText.setEnabled(False)
+        self.channel = self.getChannel.get(self.channelName)
+        self.channel.monitor(self.mycallback,'field()')
+        self.isStarted = True
         self.startButton.setEnabled(False)
-        self.disconnectButton.setEnabled(False)
-        self.isConnected = False
+        self.stopButton.setEnabled(True)
+        self.pixelLevelsText.setEnabled(True)
+        self.channelNameText.setEnabled(False)
 
     def stop(self) :
+        self.isStarted = False
         self.channel.stopMonitor()
-        self.statusText.setText('stoping')
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
-        self.disconnectButton.setEnabled(True)
         self.pixelLevelsText.setEnabled(False)
+        self.channelNameText.setEnabled(True)
+        self.channel = None
 
     def createFirstRow(self) :
         box = QHBoxLayout()
-        box.addWidget(self.connectButton)
-        box.addWidget(self.disconnectButton)
         box.addWidget(self.startButton)
         box.addWidget(self.stopButton)
         channelNameLabel = QLabel("channelName:")
@@ -542,8 +511,6 @@ class PY_NTNDA_Viewer(QWidget) :
         self.setLayout(layout)
         self.show()
         self.channelNameText.setText(self.channelName)
-        self.connectButton.clicked.connect(self.connectEvent)
-        self.disconnectButton.clicked.connect(self.disconnectEvent)
         self.startButton.clicked.connect(self.startEvent)
         self.stopButton.clicked.connect(self.stopEvent)
         self.channelNameText.editingFinished.connect(self.channelNameEvent)
