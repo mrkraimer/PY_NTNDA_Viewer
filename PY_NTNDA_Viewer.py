@@ -11,8 +11,7 @@ from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 import ctypes
 import ctypes.util
 import os
-
-#from ast import literal_eval as make_tuple
+from ast import literal_eval as make_tuple
 
 class ImageDisplay(RawImageWidget):
     def __init__(self,viewer, parent=None, **kargs):
@@ -20,9 +19,8 @@ class ImageDisplay(RawImageWidget):
         self.viewer = viewer
         self.setWindowTitle('ImageDisplay')
         self.left = 1
-        self.top = 300
-        self.maxsize = 1080 - self.top
-        self.viewer.maxsizeText.setText(str(self.maxsize))
+        self.top = 250
+        self.maxsize = 800
         self.minsize = 16
         self.nx = 0
         self.ny = 0
@@ -42,10 +40,9 @@ class ImageDisplay(RawImageWidget):
             self.isHidden = True
             self.hide()
 
-    def setMaxsize(self,maxsize) :
-        self.maxsize = maxsize
-
     def setPixelLevels(self,pixelLevels) :
+        ''' when stop is issued this is called when self.datatype is set to none '''
+        if self.datatype=='none' : return
         try :
            self.pixelLevels = make_tuple(pixelLevels)
         except Exception as error:
@@ -148,8 +145,6 @@ class ImageDisplay(RawImageWidget):
             self.width = width
             self.height = height
             self.setGeometry(self.left, self.top, self.width, self.height)
-            self.viewer.widthText.setText(str(self.width))
-            self.viewer.heightText.setText(str(self.height))
         if self.isHidden : 
             self.isHidden = False
             self.show()
@@ -158,10 +153,7 @@ class ImageDisplay(RawImageWidget):
         self.timenow = time.time()
         timediff = self.timenow - self.lasttime
         if(timediff<1) : return        
-        images = self.nImages/timediff
-        imgfmt = '{0:.2f}'.format(images)
-        text =  imgfmt + "/sec"
-        self.viewer.imageRateText.setText(text)
+        self.viewer.imageRateText.setText(str(round(self.nImages/timediff)))
         self.lasttime = self.timenow 
         self.nImages = 0
 
@@ -213,27 +205,23 @@ class PY_NTNDA_Viewer(QWidget) :
         self.channel = None
         self.isStarted = False
 # second row
-        self.maxsizeText = QLineEdit()
-        self.maxsizeText.setFixedWidth(50)
         self.nxText = QLabel()
         self.nxText.setFixedWidth(50)
         self.nyText = QLabel()
         self.nyText.setFixedWidth(50)
         self.nzText = QLabel()
-        self.nzText.setFixedWidth(50)
-        self.widthText = QLabel()
-        self.widthText.setFixedWidth(50)
-        self.heightText = QLabel()
-        self.heightText.setFixedWidth(50)
-        self.imageRateText = QLabel()
-# third row
+        self.nzText.setFixedWidth(20)
         self.dtypeText = QLabel()
+        self.dtypeText.setFixedWidth(50)
         self.codecNameText = QLabel()
-        self.compressedSizeText = QLabel()
-        self.uncompressedSizeText = QLabel()
+        self.codecNameText.setFixedWidth(40)
+        self.compressRatioText = QLabel()
+        self.compressRatioText.setFixedWidth(40)
+        self.imageRateText = QLabel()
+        self.imageRateText.setFixedWidth(40)
         self.pixelLevelsText = QLineEdit()
         self.pixelLevelsText.setEnabled(False)
-# fourth row
+# third row
         self.clearButton = QPushButton('clear')
         self.clearButton.setEnabled(True)
         self.statusText = QLineEdit()
@@ -262,15 +250,6 @@ class PY_NTNDA_Viewer(QWidget) :
         self.event.wait()
         try:
             self.channelName = self.channelNameText.text()
-        except Exception as error:
-            self.statusText.setText(repr(error))
-        self.event.set()
-
-    def maxsizeEvent(self) :
-        self.event.wait()
-        try:
-            maxsize = int(self.maxsizeText.text())
-            self.imageDisplay.setMaxsize(maxsize)
         except Exception as error:
             self.statusText.setText(repr(error))
         self.event.set()
@@ -314,23 +293,24 @@ class PY_NTNDA_Viewer(QWidget) :
         uncompressed = arg['uncompressedSize']
         codec = arg['codec']
         codecName = codec['name']
-        parameters = codec['parameters']
-        typevalue = parameters[0]['value']
-        if typevalue== 1 : datatype = "int8"; elementsize =1
-        elif typevalue== 2 : datatype = "int16"; elementsize =2
-        elif typevalue== 3 : datatype = "int32"; elementsize =4
-        elif typevalue== 4 : datatype = "int64"; elementsize =8
-        elif typevalue== 5 : datatype = "uint8"; elementsize =1
-        elif typevalue== 6 : datatype = "uint16"; elementsize =2
-        elif typevalue== 7 : datatype = "uint32"; elementsize =4
-        elif typevalue== 8 : datatype = "uint64"; elementsize =8
-        elif typevalue== 9 : datatype = "float32"; elementsize =4
-        elif typevalue== 10 : datatype = "float64"; elementsize =8
-        else : raise Exception('mapIntToType')
         if len(codecName) == 0 : 
             codecName = 'none'
             compressed = uncompressed
+            datatype = data.dtype
         else :
+            parameters = codec['parameters']
+            typevalue = parameters[0]['value']
+            if typevalue== 1 : datatype = "int8"; elementsize =int(1)
+            elif typevalue== 5 : datatype = "uint8"; elementsize =int(1)
+            elif typevalue== 2 : datatype = "int16"; elementsize =int(2)
+            elif typevalue== 6 : datatype = "uint16"; elementsize =int(2)
+            elif typevalue== 3 : datatype = "int32"; elementsize =int(4)
+            elif typevalue== 7 : datatype = "uint32"; elementsize =int(4)
+            elif typevalue== 4 : datatype = "int64"; elementsize =int(8)
+            elif typevalue== 8 : datatype = "uint64"; elementsize =int(8)
+            elif typevalue== 9 : datatype = "float32"; elementsize =int(4)
+            elif typevalue== 10 : datatype = "float64"; elementsize =int(8)
+            else : raise Exception('mapIntToType')
             if codecName=='blosc':
                 lib = self.findLibrary.find(codecName)
             elif codecName=='jpeg' :
@@ -361,7 +341,7 @@ class PY_NTNDA_Viewer(QWidget) :
                 lib.bshuf_decompress_lz4(
                      in_char_array.from_buffer(inarray),
                      out_char_array.from_buffer(outarray),int(uncompressed/elementsize),
-                     elementsize,0)
+                     elementsize,int(0))
                 data = np.array(outarray)
                 data = np.frombuffer(data,dtype=datatype)
             elif codecName=='jpeg' :
@@ -374,8 +354,8 @@ class PY_NTNDA_Viewer(QWidget) :
                 self.statusText.setText(codecName + " is unsupported codec")
                 return
         self.codecNameText.setText(codecName)
-        self.compressedSizeText.setText(str(compressed))
-        self.uncompressedSizeText.setText(str(uncompressed))
+        ratio = round(float(uncompressed/compressed))
+        self.compressRatioText.setText(str(ratio))
         self.event.wait()
         try:
             self.imageDisplay.newImage(data,dimArray)
@@ -398,9 +378,13 @@ class PY_NTNDA_Viewer(QWidget) :
         self.channel.stopMonitor()
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
+# following statement must be done in order to prevent 
+        self.imageDisplay.datatype = 'none'
+# this statment causing an exception
         self.pixelLevelsText.setEnabled(False)
         self.channelNameText.setEnabled(True)
         self.channel = None
+        self.imageDisplay.datatype = 'none'
 
     def createFirstRow(self) :
         box = QHBoxLayout()
@@ -416,10 +400,6 @@ class PY_NTNDA_Viewer(QWidget) :
 
     def createSecondRow(self) :
         box = QHBoxLayout()
-        maxsizeLabel = QLabel("maxsize:")
-        maxsizeLabel.setFixedWidth(60)
-        box.addWidget(maxsizeLabel)
-        box.addWidget(self.maxsizeText)
         nxLabel = QLabel("nx:")
         nxLabel.setFixedWidth(20)
         self.nxText.setText('0')
@@ -435,56 +415,31 @@ class PY_NTNDA_Viewer(QWidget) :
         self.nzText.setText('0')
         box.addWidget(nzLabel)
         box.addWidget(self.nzText)
-        widthLabel = QLabel("width:")
-        widthLabel.setFixedWidth(40)
-        box.addWidget(widthLabel)
-        box.addWidget(self.widthText)
-        heightLabel = QLabel("height:")
-        heightLabel.setFixedWidth(60)
-        box.addWidget(heightLabel)
-        box.addWidget(self.heightText)
+        dtypeLabel = QLabel("dtype:")
+        box.addWidget(dtypeLabel)
+        box.addWidget(self.dtypeText)
+
+        codecNameLabel = QLabel("codec:")
+        box.addWidget(codecNameLabel)
+        box.addWidget(self.codecNameText)
+        self.codecNameText.setText("none")
+
+        compressRatioLabel = QLabel("compressRatio:")
+        box.addWidget(compressRatioLabel)
+        box.addWidget(self.compressRatioText)
         imageRateLabel = QLabel("imageRate:")
-        imageRateLabel.setFixedWidth(90)
         box.addWidget(imageRateLabel)
         box.addWidget(self.imageRateText)
+        pixelLevelsLabel = QLabel("pixel levels")
+        box.addWidget(pixelLevelsLabel)
+        box.addWidget(self.pixelLevelsText)
+
         wid =  QWidget()
         wid.setLayout(box)
         wid.setFixedHeight(40)
         self.secondRow = wid
 
     def createThirdRow(self) :
-        box = QHBoxLayout()
-        dtypeLabel = QLabel("dtype:")
-        box.addWidget(dtypeLabel)
-        box.addWidget(self.dtypeText)
-        self.dtypeText.setFixedWidth(60)
-
-        codecNameLabel = QLabel("codec:")
-        box.addWidget(codecNameLabel)
-        box.addWidget(self.codecNameText)
-        self.codecNameText.setFixedWidth(60)
-        self.codecNameText.setText("none")
-
-        compressedSizeLabel = QLabel("compressed:")
-        box.addWidget(compressedSizeLabel)
-        box.addWidget(self.compressedSizeText)
-        self.compressedSizeText.setFixedWidth(100)
-
-        uncompressedSizeLabel = QLabel("uncompressed:")
-        box.addWidget(uncompressedSizeLabel)
-        box.addWidget(self.uncompressedSizeText)
-        self.uncompressedSizeText.setFixedWidth(100)
-
-        pixelLevelsLabel = QLabel("pixel levels")
-        pixelLevelsLabel.setFixedWidth(80)
-        box.addWidget(pixelLevelsLabel)
-        box.addWidget(self.pixelLevelsText)
-        wid =  QWidget()
-        wid.setLayout(box)
-        wid.setFixedHeight(40)
-        self.thirdRow = wid
-
-    def createFourthRow(self) :
         box = QHBoxLayout()
         box.addWidget(self.clearButton)
         statusLabel = QLabel("  status:")
@@ -494,19 +449,17 @@ class PY_NTNDA_Viewer(QWidget) :
         wid =  QWidget()
         wid.setLayout(box)
         wid.setFixedHeight(40)
-        self.fourthRow = wid
+        self.thirdRow = wid
 
     def initUI(self):
-        self.setGeometry(1, 1, 900, 40)
+        self.setGeometry(1, 1, 1000, 40)
         self.createFirstRow()
         self.createSecondRow()
         self.createThirdRow()
-        self.createFourthRow()
         layout = QGridLayout()
         layout.addWidget(self.firstRow,0,0)
         layout.addWidget(self.secondRow,1,0)
         layout.addWidget(self.thirdRow,2,0)
-        layout.addWidget(self.fourthRow,3,0)
         self.statusText.setText('nothing done so far')
         self.setLayout(layout)
         self.show()
@@ -514,7 +467,6 @@ class PY_NTNDA_Viewer(QWidget) :
         self.startButton.clicked.connect(self.startEvent)
         self.stopButton.clicked.connect(self.stopEvent)
         self.channelNameText.editingFinished.connect(self.channelNameEvent)
-        self.maxsizeText.editingFinished.connect(self.maxsizeEvent)
         self.pixelLevelsText.editingFinished.connect(self.pixelLevelsEvent)
         self.clearButton.clicked.connect(self.clearEvent)
         self.imageDisplay = ImageDisplay(self)
