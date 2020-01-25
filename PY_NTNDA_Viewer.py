@@ -176,6 +176,7 @@ class PY_NTNDA_Viewer(QWidget) :
     def __init__(self,channelName, parent=None):
         super(QWidget, self).__init__(parent)
         self.channelName = channelName
+        self.channelNameLabel = QLabel("channelName:")
         self.event = threading.Event()
         self.event.set()
         self.setWindowTitle("PY_NTNDA_Viewer")
@@ -250,6 +251,12 @@ class PY_NTNDA_Viewer(QWidget) :
         self.event.set()
 
     def mycallback(self,arg):
+        argtype = str(type(arg))
+        if argtype.find('Disconnected')>=0 :
+            self.channelNameLabel.setStyleSheet("background-color:red")
+            self.statusText.setText('disconnected')
+            return
+        else : self.channelNameLabel.setStyleSheet("background-color:green")
         value = None
         try:
             data = arg['value']
@@ -345,7 +352,8 @@ class PY_NTNDA_Viewer(QWidget) :
         self.subscription = self.ctxt.monitor(
               self.channelName,
               self.mycallback,
-              request='field(value,codec,compressedSize,uncompressedSize,dimension)')
+              request='field(value,codec,compressedSize,uncompressedSize,dimension)',
+              notify_disconnect=True)
         self.isStarted = True
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
@@ -361,16 +369,18 @@ class PY_NTNDA_Viewer(QWidget) :
         self.imageDisplay.datatype = 'none'
 # causing an exception
         self.pixelLevelsText.setEnabled(False)
+        self.channelNameLabel.setStyleSheet("background-color:gray")
         self.channelNameText.setEnabled(True)
         self.channel = None
         self.imageDisplay.datatype = 'none'
+        
 
     def createFirstRow(self) :
         box = QHBoxLayout()
         box.addWidget(self.startButton)
         box.addWidget(self.stopButton)
-        channelNameLabel = QLabel("channelName:")
-        box.addWidget(channelNameLabel)
+        
+        box.addWidget(self.channelNameLabel)
         box.addWidget(self.channelNameText)
         wid =  QWidget()
         wid.setLayout(box)
