@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.01.21
+# PY_NTNDA_Viewer 2020.01.25
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -92,7 +92,7 @@ The following is a list of modules required by PY_NTNDA_Viewer
 2) PyQt5
 3) PyQt5-sip
 4) QtPy
-5) pvapy
+5) p4p
 6) pyqtgraph
 
 But when Mark Rivers tried PY_NTNDA_Viewer, he found other problems with his python setup.
