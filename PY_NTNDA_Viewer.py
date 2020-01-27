@@ -13,9 +13,29 @@ import ctypes.util
 import os
 from ast import literal_eval as make_tuple
 
+#from pyqt.QtCore import Signal, Slot, Property, QTimer, Q_ENUMS, QThread
+#from qtpy.QtCore import Qthread,pyqtSignal
+from PyQt5.QtCore import QThread,pyqtSignal
+
+class ImageDisplayThread(QThread):
+#    updateSignal = Signal(list)
+    updateSignal = pyqtSignal(QWidget)
+
+    def __init__(self, widget,parent=None):
+        QThread.__init__(self, parent)
+        self.widget = widget
+
+    def setImage(self, image,pixelLevels):
+        self.image = image
+        self.pixelLevels = pixelLevels
+
+    def run(self):
+        self.updateSignal.emit(self.widget.setImage(self.image,levels=self.pixelLevels))   
+
 class ImageDisplay(RawImageWidget):
     def __init__(self,viewer, parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
+        self.thread = ImageDisplayThread(self)
         self.viewer = viewer
         self.setWindowTitle('ImageDisplay')
         self.left = 1
@@ -148,7 +168,11 @@ class ImageDisplay(RawImageWidget):
         if self.isHidden : 
             self.isHidden = False
             self.show()
-        self.setImage(image,levels=self.pixelLevels)
+        self.thread.setImage(image,self.pixelLevels)
+        self.thread.start()
+        res = self.thread.wait(1000)
+        if res==False : self.viewer.statusText.setText("setImageThreadTimeout")
+#        self.setImage(image,levels=self.pixelLevels)
         self.nImages = self.nImages + 1
         self.timenow = time.time()
         timediff = self.timenow - self.lasttime
