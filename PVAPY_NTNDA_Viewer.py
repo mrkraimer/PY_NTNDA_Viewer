@@ -2,7 +2,7 @@
 
 import sys,time
 import numpy as np
-from p4p.client.thread import Context
+from pvaccess import *
 import threading
 from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
@@ -56,6 +56,19 @@ class ImageDisplay(RawImageWidget,QObject):
         self.setImage(image,levels=self.pixelLevels)
         return 0
 
+class GetChannel(object) :
+    '''
+       This exists because whenever a new channel was started a crask occured
+    '''
+    def __init__(self, parent=None):
+        self.save = dict()
+    def get(self,channelName) :
+        channel = self.save.get(channelName)
+        if channel!=None : return channel
+        channel = Channel(channelName)
+        self.save.update({channelName : channel})
+        return channel
+
 class FindLibrary(object) :
     def __init__(self, parent=None):
         self.save = dict()
@@ -78,7 +91,8 @@ class PY_NTNDA_Viewer(QWidget) :
         self.channelNameLabel = QLabel("channelName:")
         self.event = threading.Event()
         self.event.set()
-        self.setWindowTitle("PY_NTNDA_Viewer")
+        self.setWindowTitle("PVAPY_NTNDA_Viewer")
+        self.getChannel = GetChannel()
         self.findLibrary = FindLibrary()
 # first row
         self.startButton = QPushButton('start')
@@ -87,9 +101,6 @@ class PY_NTNDA_Viewer(QWidget) :
         self.stopButton.setEnabled(False)
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
-        
-        self.ctxt = Context('pva')
-        self.subscription = None
         self.isStarted = False
 # second row
         self.nxText = QLabel()
@@ -167,7 +178,8 @@ class PY_NTNDA_Viewer(QWidget) :
         if codecName!=self.codecName : 
             self.codecName = codecName
             self.codecNameText.setText(self.codecName)
-        typevalue = codec['parameters']
+        parameters = codec['parameters']
+        typevalue = parameters[0]['value']
         if typevalue== 1 : datatype = "int8"; elementsize =int(1)
         elif typevalue== 5 : datatype = "uint8"; elementsize =int(1)
         elif typevalue== 2 : datatype = "int16"; elementsize =int(2)
@@ -325,15 +337,23 @@ class PY_NTNDA_Viewer(QWidget) :
         return image
 
     def mycallback(self,arg):
-        argtype = str(type(arg))
-        if argtype.find('Disconnected')>=0 :
-            self.channelNameLabel.setStyleSheet("background-color:red")
-            self.statusText.setText('disconnected')
-            return
-        else : self.channelNameLabel.setStyleSheet("background-color:green")
         value = None
         try:
-            data = arg['value']
+            value = arg['value'][0]
+        except Exception as error:
+            self.statusText.setText(repr(error))
+            return
+        try :
+            if len(value) != 1 :
+                self.statusText.setText('value length not 1')
+                return
+            element = None
+            for x in value :
+                element = x
+            if element == None : 
+                self.statusText.setText('value is not numpyarray')
+            else :
+                data = value[element]
         except Exception as error:
             self.statusText.setText(repr(error))
             return
@@ -383,11 +403,8 @@ class PY_NTNDA_Viewer(QWidget) :
 
     def start(self) :
         self.channelNameText.setEnabled(False)
-        self.subscription = self.ctxt.monitor(
-              self.channelName,
-              self.mycallback,
-              request='field(value,codec,compressedSize,uncompressedSize,dimension)',
-              notify_disconnect=True)
+        self.channel = self.getChannel.get(self.channelName)
+        self.channel.monitor(self.mycallback,'field()')
         self.isStarted = True
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
@@ -396,7 +413,7 @@ class PY_NTNDA_Viewer(QWidget) :
 
     def stop(self) :
         self.isStarted = False
-        self.subscription.close()
+        self.channel.stopMonitor()
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
         self.pixelLevelsText.setEnabled(False)
@@ -498,4 +515,4 @@ if __name__ == '__main__':
         channelName = sys.argv[1]
     viewer = PY_NTNDA_Viewer(channelName)
     sys.exit(app.exec_())
-
+ 

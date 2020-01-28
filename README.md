@@ -1,10 +1,23 @@
-# PY_NTNDA_Viewer 2020.01.25
+# PY_NTNDA_Viewer 2020.01.28
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
 ## Status
 
-The current version works but I still want to make some appearance changes.
+This is not ready for prime time.
+
+There are currently 2 versions:
+
+1) PY_NTNDA_Viewer.py 
+This uses p4p and crashes when simDetector is started in continous mode.
+2) PVAPY_NTNDA_Viewer.py
+This uses pvapy.
+It seems to does not crash when simDetector is started in continous mode.
+But pvapy is not available on windows.
+
+Both are quite similar.
+Note that class ImageDisplay does not access anything from class PY_NTNDA_Viewer.
+And other than calling ImageDisplay.newImage no code accesses anythink from other threads.
 
 ## Running the example
 
