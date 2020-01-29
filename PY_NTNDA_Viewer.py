@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 from PyQt5.Qt import QObject,Qt, Q_ARG, Q_RETURN_ARG, pyqtSlot
 
+from PyQt5.QtCore import pyqtSignal
+
 import ctypes
 import ctypes.util
 import os
@@ -42,7 +44,7 @@ class ImageDisplay(RawImageWidget,QObject):
         except Exception as error:
            self.viewer.statusText.setText("setPixelLevels error=" + repr(error))
 
-    @pyqtSlot(dict, result=int)
+#    @pyqtSlot(dict, result=int)
     def newImage(self,arg):
         image = arg[0]
         width = arg[1]
@@ -72,12 +74,15 @@ class FindLibrary(object) :
         return lib
 
 class PY_NTNDA_Viewer(QWidget) :
+    callbacksignal = pyqtSignal()
     def __init__(self,channelName, parent=None):
         super(QWidget, self).__init__(parent)
         self.channelName = channelName
         self.channelNameLabel = QLabel("channelName:")
         self.event = threading.Event()
         self.event.set()
+        self.callbackDoneEvent = threading.Event()
+        self.callbackDoneEvent.clear()
         self.setWindowTitle("PY_NTNDA_Viewer")
         self.findLibrary = FindLibrary()
 # first row
@@ -324,11 +329,19 @@ class PY_NTNDA_Viewer(QWidget) :
             self.imageDisplay.height = height
         return image
 
-    def mycallback(self,arg):
+    def p4pCallback(self,arg) :
+        self.arg = arg;
+        self.callbacksignal.emit()
+        self.callbackDoneEvent.wait()
+        self.callbackDoneEvent.clear()
+
+    def mycallback(self):
+        arg = self.arg
         argtype = str(type(arg))
         if argtype.find('Disconnected')>=0 :
             self.channelNameLabel.setStyleSheet("background-color:red")
             self.statusText.setText('disconnected')
+            self.callbackDoneEvent.set()
             return
         else : self.channelNameLabel.setStyleSheet("background-color:green")
         value = None
@@ -336,6 +349,7 @@ class PY_NTNDA_Viewer(QWidget) :
             data = arg['value']
         except Exception as error:
             self.statusText.setText(repr(error))
+            self.callbackDoneEvent.set()
             return
         dimArray = None
         try:
@@ -347,10 +361,12 @@ class PY_NTNDA_Viewer(QWidget) :
             codecNameLength = len(codecName)
         except Exception as error:
             self.statusText.setText(repr(error))
+            self.callbackDoneEvent.set()
             return
         ndim = len(dimArray)
         if ndim!=2 and ndim!=3 :
             self.statusText.setText('ndim not 2 or 3')
+            self.callbackDoneEvent.set()
             return
         if codecNameLength == 0 : 
             codecName = 'none'
@@ -368,8 +384,9 @@ class PY_NTNDA_Viewer(QWidget) :
                 data = self.decompress(data,codec,compressed,uncompressed)
             image = self.dataToImage(data,dimArray)
             args = (image,self.width,self.height)
-            ret = self.metaObject.invokeMethod(self.imageDisplay, "newImage",
-                            Qt.BlockingQueuedConnection, Q_RETURN_ARG(int), Q_ARG(tuple,args))
+            self.imageDisplay.newImage(args)
+#            ret = self.metaObject.invokeMethod(self.imageDisplay, "newImage",
+#                            Qt.BlockingQueuedConnection, Q_RETURN_ARG(int), Q_ARG(tuple,args))
         except Exception as error:
             self.statusText.setText(repr(error))
         self.nImages = self.nImages + 1
@@ -380,12 +397,13 @@ class PY_NTNDA_Viewer(QWidget) :
             self.lasttime = self.timenow 
             self.nImages = 0
         self.event.set()
+        self.callbackDoneEvent.set()
 
     def start(self) :
         self.channelNameText.setEnabled(False)
         self.subscription = self.ctxt.monitor(
               self.channelName,
-              self.mycallback,
+              self.p4pCallback,
               request='field(value,codec,compressedSize,uncompressedSize,dimension)',
               notify_disconnect=True)
         self.isStarted = True
@@ -488,7 +506,10 @@ class PY_NTNDA_Viewer(QWidget) :
         self.pixelLevelsText.editingFinished.connect(self.pixelLevelsEvent)
         self.clearButton.clicked.connect(self.clearEvent)
         self.imageDisplay = ImageDisplay()
-        self.metaObject = self.imageDisplay.metaObject()
+#        self.metaObject = self.imageDisplay.metaObject()
+        
+        self.arg = None
+        self.callbacksignal.connect(self.mycallback)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
