@@ -3,11 +3,10 @@
 import sys,time
 import numpy as np
 from p4p.client.thread import Context
-import threading
+from threading import Event
 from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
-from PyQt5.Qt import QObject,Qt, Q_ARG, Q_RETURN_ARG, pyqtSlot
 
 from PyQt5.QtCore import pyqtSignal
 
@@ -16,10 +15,9 @@ import ctypes.util
 import os
 from ast import literal_eval as make_tuple
 
-class ImageDisplay(RawImageWidget,QObject):
+class ImageDisplay(RawImageWidget):
     def __init__(self,name= 'ImageDisplay', parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
-        QObject.__init__(self)
         self.setObjectName('ImageDisplay')
         self.setWindowTitle('ImageDisplay')
         self.left = 1
@@ -44,7 +42,6 @@ class ImageDisplay(RawImageWidget,QObject):
         except Exception as error:
            self.viewer.statusText.setText("setPixelLevels error=" + repr(error))
 
-#    @pyqtSlot(dict, result=int)
     def newImage(self,arg):
         image = arg[0]
         width = arg[1]
@@ -78,69 +75,82 @@ class PY_NTNDA_Viewer(QWidget) :
     def __init__(self,channelName, parent=None):
         super(QWidget, self).__init__(parent)
         self.channelName = channelName
-        self.channelNameLabel = QLabel("channelName:")
-        self.event = threading.Event()
-        self.event.set()
-        self.callbackDoneEvent = threading.Event()
-        self.callbackDoneEvent.clear()
-        self.setWindowTitle("PY_NTNDA_Viewer")
-        self.findLibrary = FindLibrary()
 # first row
         self.startButton = QPushButton('start')
         self.startButton.setEnabled(True)
+        self.isStarted = False
         self.stopButton = QPushButton('stop')
         self.stopButton.setEnabled(False)
+        self.channelNameLabel = QLabel("channelName:")
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
-        
-        self.ctxt = Context('pva')
-        self.subscription = None
-        self.isStarted = False
+        self.channelNameText.setText(self.channelName)
+        self.startButton.clicked.connect(self.startEvent)
+        self.stopButton.clicked.connect(self.stopEvent)
+        self.channelNameText.editingFinished.connect(self.channelNameEvent)
+        self.createFirstRow()
 # second row
+        self.nx = 0
+        self.ny = 0
+        self.nz = 0
         self.nxText = QLabel()
         self.nxText.setFixedWidth(50)
         self.nyText = QLabel()
         self.nyText.setFixedWidth(50)
         self.nzText = QLabel()
         self.nzText.setFixedWidth(20)
+        self.datatype = None
         self.dtypeText = QLabel()
         self.dtypeText.setFixedWidth(50)
+        self.codecName = ''
         self.codecNameText = QLabel()
         self.codecNameText.setFixedWidth(40)
         self.compressRatioText = QLabel()
         self.compressRatioText.setFixedWidth(40)
+        self.nImages = 0
         self.imageRateText = QLabel()
         self.imageRateText.setFixedWidth(40)
         self.pixelLevelsText = QLineEdit()
         self.pixelLevelsText.setEnabled(False)
+        self.pixelLevelsText.editingFinished.connect(self.pixelLevelsEvent)
+        self.compressRatio = round(1.0)
+        self.compressRatioText.setText(str(self.compressRatio))
+        self.createSecondRow()
 # third row
         self.clearButton = QPushButton('clear')
         self.clearButton.setEnabled(True)
+        self.clearButton.clicked.connect(self.clearEvent)    
         self.statusText = QLineEdit()
+        self.statusText.setText('nothing done so far')
+        self.createThirdRow()
 # initialize
+        layout = QGridLayout()
+        layout.addWidget(self.firstRow,0,0)
+        layout.addWidget(self.secondRow,1,0)
+        layout.addWidget(self.thirdRow,2,0)
+        self.setLayout(layout)
+        self.callbackDoneEvent = Event()
+        self.callbackDoneEvent.clear()
+        self.setWindowTitle("PY_NTNDA_Viewer")
+        self.findLibrary = FindLibrary()
+        self.subscription = None
         self.lasttime = time.time() -2
-        self.nImages = 0
-        self.nx = 0
-        self.ny = 0
-        self.nz = 0
-        self.datatype = None
         self.maxsize = 800
         self.minsize = 16
         self.width = self.maxsize
         self.height = self.maxsize
-        self.codecName = ''
-        self.compressRatio = round(1.0)
-        self.compressRatioText.setText(str(self.compressRatio))
-        self.initUI()
+        self.imageDisplay = ImageDisplay()
+        self.arg = None
+        self.callbacksignal.connect(self.mycallback)
+        self.setGeometry(1, 1, 1000, 40)
+        self.show()
 
     def closeEvent(self, event) :
-        if self.isStarted : 
-            self.statusText.setText('PY_NTNDA_Viewer can only be closed when stopped')
-            event.ignore()
-            return
+        if self.isStarted : self.stop()
         if self.imageDisplay!=None :
-            self.imageDisplay.okToClose = True
-            self.imageDisplay.close()
+            self.imageDisplay.ignoreClose = False
+            self.imageDisplay.hide()
+            self.imageDisplay.closeEvent(None)
         
     def startEvent(self) :
         self.start()
@@ -152,20 +162,108 @@ class PY_NTNDA_Viewer(QWidget) :
         self.statusText.setText('')
     
     def channelNameEvent(self) :
-        self.event.wait()
         try:
             self.channelName = self.channelNameText.text()
         except Exception as error:
             self.statusText.setText(repr(error))
-        self.event.set()
 
     def pixelLevelsEvent(self) :
-        self.event.wait()
         try:
             self.imageDisplay.setPixelLevels(self.pixelLevelsText.text())
         except Exception as error:
             self.statusText.setText(repr(error))
-        self.event.set()
+
+    def start(self) :
+        self.channelNameText.setEnabled(False)
+        self.callbackDoneEvent.clear()
+        self.ctxt = Context('pva')
+        self.subscription = self.ctxt.monitor(
+              self.channelName,
+              self.p4pCallback,
+              request='field(value,codec,compressedSize,uncompressedSize,dimension)',
+              notify_disconnect=True)
+        self.isStarted = True
+        self.startButton.setEnabled(False)
+        self.stopButton.setEnabled(True)
+        self.pixelLevelsText.setEnabled(True)
+        self.channelNameText.setEnabled(False)
+
+    def stop(self) :
+        self.ctxt.close()
+        self.callbackDoneEvent.set()
+        self.startButton.setEnabled(True)
+        self.stopButton.setEnabled(False)
+        self.pixelLevelsText.setEnabled(False)
+        self.channelNameLabel.setStyleSheet("background-color:gray")
+        self.channelNameText.setEnabled(True)
+        self.channel = None
+        self.isStarted = False
+
+    def p4pCallback(self,arg) :
+        self.arg = arg;
+        self.callbacksignal.emit()
+        self.callbackDoneEvent.wait()
+        self.callbackDoneEvent.clear()
+
+    def mycallback(self):
+        arg = self.arg
+        argtype = str(type(arg))
+        if argtype.find('Disconnected')>=0 :
+            self.channelNameLabel.setStyleSheet("background-color:red")
+            self.statusText.setText('disconnected')
+            self.callbackDoneEvent.set()
+            return
+        else : self.channelNameLabel.setStyleSheet("background-color:green")
+        value = None
+        try:
+            data = arg['value']
+        except Exception as error:
+            self.statusText.setText(repr(error))
+            self.callbackDoneEvent.set()
+            return
+        dimArray = None
+        try:
+            dimArray = arg['dimension']
+            compressed = arg['compressedSize']
+            uncompressed = arg['uncompressedSize']
+            codec = arg['codec']
+            codecName = codec['name']
+            codecNameLength = len(codecName)
+        except Exception as error:
+            self.statusText.setText(repr(error))
+            self.callbackDoneEvent.set()
+            return
+        ndim = len(dimArray)
+        if ndim!=2 and ndim!=3 :
+            self.statusText.setText('ndim not 2 or 3')
+            self.callbackDoneEvent.set()
+            return
+        if codecNameLength == 0 : 
+            codecName = 'none'
+            if codecName!=self.codecName : 
+                self.codecName = codecName
+                self.codecNameText.setText(self.codecName)
+            ratio = round(1.0)
+            if ratio!=self.compressRatio :
+                self.compressRatio = ratio
+                self.compressRatioText.setText(str(self.compressRatio))
+            datatype = data.dtype
+        try:
+            if codecNameLength != 0 : 
+                data = self.decompress(data,codec,compressed,uncompressed)
+            image = self.dataToImage(data,dimArray)
+            args = (image,self.width,self.height)
+            self.imageDisplay.newImage(args)
+        except Exception as error:
+            self.statusText.setText(repr(error))
+        self.nImages = self.nImages + 1
+        self.timenow = time.time()
+        timediff = self.timenow - self.lasttime
+        if(timediff>1) :
+            self.imageRateText.setText(str(round(self.nImages/timediff)))
+            self.lasttime = self.timenow 
+            self.nImages = 0
+        self.callbackDoneEvent.set()
 
     def decompress(self,data,codec,compressed,uncompressed) :
         codecName = codec['name']
@@ -329,104 +427,10 @@ class PY_NTNDA_Viewer(QWidget) :
             self.imageDisplay.height = height
         return image
 
-    def p4pCallback(self,arg) :
-        self.arg = arg;
-        self.callbacksignal.emit()
-        self.callbackDoneEvent.wait()
-        self.callbackDoneEvent.clear()
-
-    def mycallback(self):
-        arg = self.arg
-        argtype = str(type(arg))
-        if argtype.find('Disconnected')>=0 :
-            self.channelNameLabel.setStyleSheet("background-color:red")
-            self.statusText.setText('disconnected')
-            self.callbackDoneEvent.set()
-            return
-        else : self.channelNameLabel.setStyleSheet("background-color:green")
-        value = None
-        try:
-            data = arg['value']
-        except Exception as error:
-            self.statusText.setText(repr(error))
-            self.callbackDoneEvent.set()
-            return
-        dimArray = None
-        try:
-            dimArray = arg['dimension']
-            compressed = arg['compressedSize']
-            uncompressed = arg['uncompressedSize']
-            codec = arg['codec']
-            codecName = codec['name']
-            codecNameLength = len(codecName)
-        except Exception as error:
-            self.statusText.setText(repr(error))
-            self.callbackDoneEvent.set()
-            return
-        ndim = len(dimArray)
-        if ndim!=2 and ndim!=3 :
-            self.statusText.setText('ndim not 2 or 3')
-            self.callbackDoneEvent.set()
-            return
-        if codecNameLength == 0 : 
-            codecName = 'none'
-            if codecName!=self.codecName : 
-                self.codecName = codecName
-                self.codecNameText.setText(self.codecName)
-            ratio = round(1.0)
-            if ratio!=self.compressRatio :
-                self.compressRatio = ratio
-                self.compressRatioText.setText(str(self.compressRatio))
-            datatype = data.dtype
-        self.event.wait()
-        try:
-            if codecNameLength != 0 : 
-                data = self.decompress(data,codec,compressed,uncompressed)
-            image = self.dataToImage(data,dimArray)
-            args = (image,self.width,self.height)
-            self.imageDisplay.newImage(args)
-#            ret = self.metaObject.invokeMethod(self.imageDisplay, "newImage",
-#                            Qt.BlockingQueuedConnection, Q_RETURN_ARG(int), Q_ARG(tuple,args))
-        except Exception as error:
-            self.statusText.setText(repr(error))
-        self.nImages = self.nImages + 1
-        self.timenow = time.time()
-        timediff = self.timenow - self.lasttime
-        if(timediff>1) :
-            self.imageRateText.setText(str(round(self.nImages/timediff)))
-            self.lasttime = self.timenow 
-            self.nImages = 0
-        self.event.set()
-        self.callbackDoneEvent.set()
-
-    def start(self) :
-        self.channelNameText.setEnabled(False)
-        self.subscription = self.ctxt.monitor(
-              self.channelName,
-              self.p4pCallback,
-              request='field(value,codec,compressedSize,uncompressedSize,dimension)',
-              notify_disconnect=True)
-        self.isStarted = True
-        self.startButton.setEnabled(False)
-        self.stopButton.setEnabled(True)
-        self.pixelLevelsText.setEnabled(True)
-        self.channelNameText.setEnabled(False)
-
-    def stop(self) :
-        self.isStarted = False
-        self.subscription.close()
-        self.startButton.setEnabled(True)
-        self.stopButton.setEnabled(False)
-        self.pixelLevelsText.setEnabled(False)
-        self.channelNameLabel.setStyleSheet("background-color:gray")
-        self.channelNameText.setEnabled(True)
-        self.channel = None
-
     def createFirstRow(self) :
         box = QHBoxLayout()
         box.addWidget(self.startButton)
         box.addWidget(self.stopButton)
-        
         box.addWidget(self.channelNameLabel)
         box.addWidget(self.channelNameText)
         wid =  QWidget()
@@ -454,12 +458,10 @@ class PY_NTNDA_Viewer(QWidget) :
         dtypeLabel = QLabel("dtype:")
         box.addWidget(dtypeLabel)
         box.addWidget(self.dtypeText)
-
         codecNameLabel = QLabel("codec:")
         box.addWidget(codecNameLabel)
         box.addWidget(self.codecNameText)
         self.codecNameText.setText("none")
-
         compressRatioLabel = QLabel("compressRatio:")
         box.addWidget(compressRatioLabel)
         box.addWidget(self.compressRatioText)
@@ -469,7 +471,6 @@ class PY_NTNDA_Viewer(QWidget) :
         pixelLevelsLabel = QLabel("pixel levels")
         box.addWidget(pixelLevelsLabel)
         box.addWidget(self.pixelLevelsText)
-
         wid =  QWidget()
         wid.setLayout(box)
         wid.setFixedHeight(40)
@@ -486,30 +487,6 @@ class PY_NTNDA_Viewer(QWidget) :
         wid.setLayout(box)
         wid.setFixedHeight(40)
         self.thirdRow = wid
-
-    def initUI(self):
-        self.setGeometry(1, 1, 1000, 40)
-        self.createFirstRow()
-        self.createSecondRow()
-        self.createThirdRow()
-        layout = QGridLayout()
-        layout.addWidget(self.firstRow,0,0)
-        layout.addWidget(self.secondRow,1,0)
-        layout.addWidget(self.thirdRow,2,0)
-        self.statusText.setText('nothing done so far')
-        self.setLayout(layout)
-        self.show()
-        self.channelNameText.setText(self.channelName)
-        self.startButton.clicked.connect(self.startEvent)
-        self.stopButton.clicked.connect(self.stopEvent)
-        self.channelNameText.editingFinished.connect(self.channelNameEvent)
-        self.pixelLevelsText.editingFinished.connect(self.pixelLevelsEvent)
-        self.clearButton.clicked.connect(self.clearEvent)
-        self.imageDisplay = ImageDisplay()
-#        self.metaObject = self.imageDisplay.metaObject()
-        
-        self.arg = None
-        self.callbacksignal.connect(self.mycallback)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
