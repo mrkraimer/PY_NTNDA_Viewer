@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-import sys,time
+import sys,time,signal
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 import numpy as np
 from p4p.client.thread import Context
 from threading import Event
