@@ -20,7 +20,7 @@ class ImageDisplay(RawImageWidget):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
         self.setObjectName('ImageDisplay')
         self.setWindowTitle('ImageDisplay')
-        self.left = 1
+        self.left = 10
         self.top = 250
         self.maxsize = 800
         self.width = self.maxsize
@@ -142,7 +142,7 @@ class PY_NTNDA_Viewer(QWidget) :
         self.imageDisplay = ImageDisplay()
         self.arg = None
         self.callbacksignal.connect(self.mycallback)
-        self.setGeometry(1, 1, 1000, 40)
+        self.setGeometry(10, 40, 1000, 40)
         self.show()
 
     def closeEvent(self, event) :
