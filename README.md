@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.01.28
+# PY_NTNDA_Viewer 2020.02.01
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -57,23 +57,23 @@ then I just enter
 
 
 
-### start PY_NTNDA_Viewer
+### start P4P_NTNDA_Viewer or PVAPY_NTNDA_Viewer
 
 In order to use the codec support from **areaDetector** you must have
 a path to **areaDetector/ADSupport/lib...** defined.
 The details differ between windows and linux or macos.
 
-An example is **exampleStart**
+An example is **exampleStartP4P**, which uses **p4p** for communication with the simDetector.
 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/epics7/areaDetector/ADSupport/lib/linux-x86_64
-    python PY_NTNDA_Viewer.py 13SIM1:Pva1:Image
+    python P4P_NTNDA_Viewer.py 13SIM1:Pva1:Image
 
 
 I start it via
 
     mrk> pwd
     /home/epics7/modules/PY_NTNDA_Viewer
-    mrk> ./exampleStart
+    mrk> ./exampleStartP4P
 
 You will see errors if You have not installed all the python packages required.
 If it shows no errors click connect and start.
@@ -83,6 +83,8 @@ Then select plugins All and enable the PVA1 plugin.
 Then click connect and then start.
 
 You should see images being displayed.
+
+**exampleStartPVAPY** starts **PVAPY_NTNDA_Viewer.py**, which uses **pvapy** for communication with the simDetector.
 
 ## Required python modules
 
@@ -105,11 +107,9 @@ The following is a list of modules required by PY_NTNDA_Viewer
 2) PyQt5
 3) PyQt5-sip
 4) QtPy
-5) p4p
+5) p4p or pvapy
 6) pyqtgraph
 
-But when Mark Rivers tried PY_NTNDA_Viewer, he found other problems with his python setup.
-He did resolve his problems and got it to work.
 
 ## Other things to try
 
