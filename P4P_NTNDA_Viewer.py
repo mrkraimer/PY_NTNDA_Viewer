@@ -14,10 +14,10 @@ class P4PProvider(QObject,NTNDA_Viewer_Provider) :
         NTNDA_Viewer_Provider.__init__(self)
         self.callbacksignal.connect(self.mycallback)
         self.callbackDoneEvent = Event()
-        self.ctxt = Context('pva')
         self.firstCallback = True
         
     def start(self) :
+        self.ctxt = Context('pva')
         self.firstCallback = True
         self.subscription = self.ctxt.monitor(
               self.getChannelName(),
