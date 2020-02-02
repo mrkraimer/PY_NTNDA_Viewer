@@ -4,12 +4,9 @@ import sys,time,signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 import numpy as np
 from p4p.client.thread import Context
-from threading import Event
 from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
-
-from PyQt5.QtCore import pyqtSignal
 
 import ctypes
 import ctypes.util
@@ -88,7 +85,6 @@ class FindLibrary(object) :
         return lib
 
 class NTNDA_Viewer(QWidget) :
-    callbacksignal = pyqtSignal()
     def __init__(self,provider,providerName, parent=None):
         super(QWidget, self).__init__(parent)
         self.provider = provider
@@ -103,6 +99,7 @@ class NTNDA_Viewer(QWidget) :
         self.channelNameLabel = QLabel("channelName:")
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
+        self.channelNameText.setText(self.provider.getChannelName())
         self.startButton.clicked.connect(self.startEvent)
         self.stopButton.clicked.connect(self.stopEvent)
         self.channelNameText.editingFinished.connect(self.channelNameEvent)
@@ -147,8 +144,6 @@ class NTNDA_Viewer(QWidget) :
         layout.addWidget(self.secondRow,1,0)
         layout.addWidget(self.thirdRow,2,0)
         self.setLayout(layout)
-        self.callbackDoneEvent = Event()
-        self.callbackDoneEvent.clear()
         self.setWindowTitle(self.windowTitle)
         self.findLibrary = FindLibrary()
         self.subscription = None
@@ -159,7 +154,6 @@ class NTNDA_Viewer(QWidget) :
         self.height = self.maxsize
         self.imageDisplay = ImageDisplay()
         self.arg = None
-        self.callbacksignal.connect(self.mycallback)
         self.setGeometry(10, 40, 1000, 40)
         self.show()
 
@@ -182,7 +176,7 @@ class NTNDA_Viewer(QWidget) :
     
     def channelNameEvent(self) :
         try:
-            self.channelName = self.channelNameText.text()
+            self.provider.setChannelName(self.channelNameText.text())
         except Exception as error:
             self.statusText.setText(repr(error))
 
@@ -193,9 +187,8 @@ class NTNDA_Viewer(QWidget) :
             self.statusText.setText(repr(error))
 
     def start(self) :
-        self.channelNameText.setEnabled(False)
-        self.callbackDoneEvent.clear()
         self.provider.start()
+        self.channelNameText.setEnabled(False)
         self.isStarted = True
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
@@ -204,7 +197,6 @@ class NTNDA_Viewer(QWidget) :
 
     def stop(self) :
         self.provider.stop()
-        self.callbackDoneEvent.set()
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
         self.pixelLevelsText.setEnabled(False)
@@ -213,35 +205,24 @@ class NTNDA_Viewer(QWidget) :
         self.channel = None
         self.isStarted = False
 
-    def callback(self,arg) :
-        self.arg = arg;
-        self.callbacksignal.emit()
-        self.callbackDoneEvent.wait()
-        self.callbackDoneEvent.clear()
-
-    def mycallback(self):
-        arg = self.arg
+    def callback(self,arg):
         if len(arg)==1 :
             value = arg.get("exception")
             if value!=None :
                 self.statusText.setText(repr(error))
-                self.callbackDoneEvent.set()
                 return
             value = arg.get("status")
             if value!=None :
                 if value=="disconnected" :
                     self.channelNameLabel.setStyleSheet("background-color:red")
                     self.statusText.setText('disconnected')
-                    self.callbackDoneEvent.set()
                     return
                 elif value=="connected" :
                     self.channelNameLabel.setStyleSheet("background-color:green")
                     self.statusText.setText('connected')
-                    self.callbackDoneEvent.set()
                     return
                 else :
                     self.statusText.setText("unknown callback error")
-                    self.callbackDoneEvent.set()
                     return
         try:
             data = arg['value']
@@ -253,12 +234,10 @@ class NTNDA_Viewer(QWidget) :
             codecNameLength = len(codecName)
         except Exception as error:
             self.statusText.setText(repr(error))
-            self.callbackDoneEvent.set()
             return
         ndim = len(dimArray)
         if ndim!=2 and ndim!=3 :
             self.statusText.setText('ndim not 2 or 3')
-            self.callbackDoneEvent.set()
             return
         if codecNameLength == 0 : 
             codecName = 'none'
@@ -285,7 +264,6 @@ class NTNDA_Viewer(QWidget) :
             self.imageRateText.setText(str(round(self.nImages/timediff)))
             self.lasttime = self.timenow 
             self.nImages = 0
-        self.callbackDoneEvent.set()
 
     def decompress(self,data,codec,compressed,uncompressed) :
         codecName = codec['name']

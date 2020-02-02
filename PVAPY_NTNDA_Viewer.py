@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 
-from NTNDA_Viewer import NTNDA_Viewer_Provider
-from NTNDA_Viewer import NTNDA_Viewer
-
-import sys,time,signal
-
-import numpy as np
+from NTNDA_Viewer import NTNDA_Viewer_Provider,NTNDA_Viewer
 from pvaccess import *
+import sys
 from threading import Event
-from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
-from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
-from pyqtgraph.widgets.RawImageWidget import RawImageWidget
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QObject,pyqtSignal
 
 class GetChannel(object) :
     '''
@@ -25,19 +20,30 @@ class GetChannel(object) :
         self.save.update({channelName : channel})
         return channel
 
-class PVAPYProvider(NTNDA_Viewer_Provider) :
+class PVAPYProvider(QObject,NTNDA_Viewer_Provider) :
+    callbacksignal = pyqtSignal()
     def __init__(self):
+        QObject.__init__(self)
         NTNDA_Viewer_Provider.__init__(self)
         self.getChannel = GetChannel()
+        self.callbacksignal.connect(self.mycallback)
+        self.callbackDoneEvent = Event()
+
     def start(self) :
         self.channel = self.getChannel.get(self.getChannelName())
-        self.channel.monitor(self.mycallback,
+        self.channel.monitor(self.pvapycallback,
               'field(value,dimension,codec,compressedSize,uncompressedSize)')
     def stop(self) :
         self.channel.stopMonitor()
     def done(self) :
         pass
-    def mycallback(self,struct) :
+    def pvapycallback(self,arg) :
+        self.struct = arg;
+        self.callbacksignal.emit()
+        self.callbackDoneEvent.wait()
+        self.callbackDoneEvent.clear()
+    def mycallback(self) :
+        struct = self.struct
         arg = dict()
         try :
             val = struct['value'][0]
@@ -51,24 +57,36 @@ class PVAPYProvider(NTNDA_Viewer_Provider) :
             value = val[element]
             arg['value'] = value
             arg['dimension'] = struct['dimension']
-            arg['codec'] = struct['codec']
+            codec = struct['codec']
+            codecName = codec['name']
+            if len(codecName)<1 :
+                arg['codec'] = struct['codec']
+            else :
+                parameters = codec['parameters']
+                typevalue = parameters[0]['value']
+                cod = dict()
+                cod['name'] = codecName
+                cod['parameters'] = typevalue
+                arg['codec'] = cod
             arg['compressedSize'] = struct['compressedSize']
             arg['uncompressedSize'] = struct['uncompressedSize']
             self.callback(arg)
+            self.callbackDoneEvent.set()
             return
         except Exception as error:
             arg["exception"] = repr(error)
             self.callback(arg)
+            self.callbackDoneEvent.set()
             return
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     PVAPYProvider = PVAPYProvider()
-    viewer = NTNDA_Viewer(PVAPYProvider,"PVAPY")
     channelName = None
     nargs = len(sys.argv)
     if nargs>=2 :
         channelName = sys.argv[1]
     PVAPYProvider.setChannelName(channelName)
+    viewer = NTNDA_Viewer(PVAPYProvider,"PVAPY")
     sys.exit(app.exec_())
 
