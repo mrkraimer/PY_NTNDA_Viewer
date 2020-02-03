@@ -15,20 +15,24 @@ class P4PProvider(QObject,NTNDA_Viewer_Provider) :
         self.callbacksignal.connect(self.mycallback)
         self.callbackDoneEvent = Event()
         self.firstCallback = True
+        self.isClosed = True
         
     def start(self) :
         self.ctxt = Context('pva')
         self.firstCallback = True
+        self.isClosed = False
         self.subscription = self.ctxt.monitor(
               self.getChannelName(),
               self.p4pcallback,
               request='field(value,dimension,codec,compressedSize,uncompressedSize)',
               notify_disconnect=True)
     def stop(self) :
+        self.isClosed = True
         self.ctxt.close()
     def done(self) :
         pass
     def p4pcallback(self,arg) :
+        if self.isClosed : return
         self.struct = arg;
         self.callbacksignal.emit()
         self.callbackDoneEvent.wait()

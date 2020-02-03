@@ -1,10 +1,10 @@
-# PY_NTNDA_Viewer 2020.02.01
+# PY_NTNDA_Viewer 2020.02.03
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
 ## Status
 
-This is not ready for prime time.
+This is almost ready for prime time.
 
 There are currently 2 versions:
 
@@ -154,9 +154,28 @@ than the uncompressed size.
 
 ### Performance
 
-I set acquire period to .001 (it was initially .005)
-EPICS_NTDA_Viewer could only do about 140 frames/second
-PY_NTDA_Viewer does about 330 frames/second.
+For a 1024x1024 image:
 
-Mark Rivers reports diffenent results.
+1) NDPVa generates 196 frames/sec
+2) EPICS_NTDA_Viewer handles 140 frames/second
+3) NTDA_Viewer only does about 20 frames/second.
+
+For a 512cx512 image:
+
+1) NDPVa generates 196 frames/sec
+2) EPICS_NTDA_Viewer handles 193 frames/second
+3) NTDA_Viewer does about 135 frames/second.
+
+
+I did some searching on-line and saw:
+
+'''
+The ImageView class can also be instantiated directly and embedded in Qt applications.
+Instances of ImageItem can be used inside a ViewBox or GraphicsView.
+For higher performance, use RawImageWidget.
+Any of these classes are acceptable for displaying video by calling setImage() to display a new frame. To increase performance, the image processing system uses scipy.weave to produce compiled libraries. If your computer has a compiler available, weave will automatically attempt to build the libraries it needs on demand. If this fails, then the slower pure-python methods will be used instead.
+'''
+
+But for python3, **weave** is no longer supported 
+
 
