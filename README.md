@@ -169,13 +169,15 @@ For a 512cx512 image:
 
 I did some searching on-line and saw:
 
-'''
-The ImageView class can also be instantiated directly and embedded in Qt applications.
-Instances of ImageItem can be used inside a ViewBox or GraphicsView.
-For higher performance, use RawImageWidget.
-Any of these classes are acceptable for displaying video by calling setImage() to display a new frame. To increase performance, the image processing system uses scipy.weave to produce compiled libraries. If your computer has a compiler available, weave will automatically attempt to build the libraries it needs on demand. If this fails, then the slower pure-python methods will be used instead.
-'''
+
+    The ImageView class can also be instantiated directly and embedded in Qt applications.
+    Instances of ImageItem can be used inside a ViewBox or GraphicsView.
+    For higher performance, use RawImageWidget.
+    Any of these classes are acceptable for displaying video by calling setImage() to display a new frame.
+    To increase performance, the image processing system uses scipy.weave to produce compiled libraries.
+    If your computer has a compiler available, weave will automatically attempt to build the libraries it needs on demand.
+    If this fails, then the slower pure-python methods will be used instead.
+
 
 But for python3, **weave** is no longer supported 
-
 
