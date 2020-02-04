@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.02.03
+# PY_NTNDA_Viewer 2020.02.04
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
