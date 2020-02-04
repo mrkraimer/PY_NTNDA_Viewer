@@ -181,3 +181,5 @@ I did some searching on-line and saw:
 
 But for python3, **weave** is no longer supported 
 
+It is possible that ImageJ is not really displaying 140/193 frames/s because the actual drawing operation may be deferred and throttled just like Qt. But the code thinks it is doing the faster rate because is not waiting for the display to update.
+
