@@ -4,14 +4,14 @@ import sys,time,signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 import numpy as np
 from p4p.client.thread import Context
-from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit
+from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit,QSlider
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
+from PyQt5.QtCore import *
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 import ctypes
 import ctypes.util
 import os
-from ast import literal_eval as make_tuple
 
 class NTNDA_Viewer_Provider(object) :
     def __init__(self) :
@@ -51,10 +51,7 @@ class ImageDisplay(RawImageWidget):
             self.hide()
 
     def setPixelLevels(self,pixelLevels) :
-        try :
-           self.pixelLevels = make_tuple(pixelLevels)
-        except Exception as error:
-           self.viewer.statusText.setText("setPixelLevels error=" + repr(error))
+        self.pixelLevels = pixelLevels
 
     def newImage(self,arg):
         image = arg[0]
@@ -83,6 +80,174 @@ class FindLibrary(object) :
             lib = ctypes.cdll.LoadLibrary(result)
         if lib!=None : self.save.update({name : lib})
         return lib
+
+class PixelLevelControl(QWidget) :
+    def __init__(self, parent=None):
+        super(QWidget, self).__init__(parent)
+        self.npixelLevels = 255
+        self.windowTitle = 'Pixel_Level_Control'
+        self.dtype = ""
+        self.minimum = 0;
+        self.low = 0
+        self.high = self.npixelLevels
+        self.maximum = self.npixelLevels
+        self.okToClose = False
+        self.isHidden = True
+# first row
+        minimumLabel = QLabel("minimum")
+        minimumLabel.setFixedWidth(150)
+        lowLabel = QLabel("low")
+        lowLabel.setFixedWidth(150)
+        highLabel = QLabel("high")
+        highLabel.setFixedWidth(150)
+        maximumLabel = QLabel("maximum")
+        maximumLabel.setFixedWidth(150)
+        box = QHBoxLayout()
+        box.addWidget(minimumLabel)
+        box.addWidget(lowLabel);
+        box.addWidget(highLabel);
+        box.addWidget(maximumLabel)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(40)
+        self.firstRow = wid
+#second row
+        self.minimumText = QLineEdit()
+        self.minimumText.setText('')
+        self.minimumText.setEnabled(True)
+        self.minimumText.setFixedWidth(150)
+        self.minimumText.editingFinished.connect(self.minimumEvent)
+        self.lowText = QLabel('')
+        self.lowText.setFixedWidth(150)
+        self.highText = QLabel('')
+        self.highText.setFixedWidth(150)
+        self.maximumText = QLineEdit()
+        self.maximumText.setFixedWidth(150)
+        self.maximumText.editingFinished.connect(self.maximumEvent)
+        self.maximumText.setEnabled(True)
+        self.maximumText.setText('')
+        box = QHBoxLayout()
+        box.addWidget(self.minimumText)
+        box.addWidget(self.lowText)
+        box.addWidget(self.highText)
+        box.addWidget(self.maximumText)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(40)
+        self.secondRow = wid
+#third row
+        self.lowSlider = QSlider(Qt.Horizontal)
+        self.lowSlider.setMinimum(0)
+        self.lowSlider.setMaximum(self.npixelLevels)
+        self.lowSlider.setValue(0)
+        self.lowSlider.setTickPosition(QSlider.TicksBelow)
+        self.lowSlider.setTickInterval(10)
+        self.lowSlider.setFixedWidth(300)
+        self.highSlider = QSlider(Qt.Horizontal)
+        self.highSlider.setMinimum(0)
+        self.highSlider.setMaximum(self.npixelLevels)
+        self.highSlider.setValue(self.npixelLevels)
+        self.highSlider.setTickPosition(QSlider.TicksBelow)
+        self.highSlider.setTickInterval(10)
+        self.highSlider.setFixedWidth(300)
+        box = QHBoxLayout()
+        box.addWidget(self.lowSlider)
+        box.addWidget(self.highSlider)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(40)
+        self.thirdRow = wid
+#create window
+        layout = QGridLayout()
+        layout.addWidget(self.firstRow,0,0)
+        layout.addWidget(self.secondRow,1,0)
+        layout.addWidget(self.thirdRow,2,0)
+        self.setLayout(layout)
+        self.setWindowTitle(self.windowTitle)
+        self.lowSlider.valueChanged.connect(self.lowSliderValueChange)
+        self.highSlider.valueChanged.connect(self.highSliderValueChange)
+
+    def minimumEvent(self) :
+        try:
+            minimum = float(self.minimumText.text())
+            if minimum>self.maximum :
+                minimum = self.maximum
+                self.minimumText.setText(str(minimum))
+            if minimum>self.low :
+                self.low = minimum
+                self.lowText.setText(str(self.low))
+        except Exception as error:
+            self.minimumText.setText(repr(error))
+
+    def maximumEvent(self) :
+        try:
+            maximum = float(self.maximumText.text())
+            if maximum<self.minimum :
+                maximum = self.minimum
+                self.maximumText.setText(str(maximum))
+            if maximum<self.high :
+                self.high = maximum
+                self.highText.setText(str(self.high))
+        except Exception as error:
+            self.maximumText.setText(repr(error))
+
+    def getPixelLevels(self) :
+        return (self.low,self.high)
+
+    def setDtype(self,datatype) :
+        if datatype==self.dtype : return
+        if datatype==str("int8") :
+            pixelLevels = (int(-128),int(127))
+        elif datatype==str("uint8") :
+            pixelLevels = (int(0),int(255))
+        elif datatype==str("int16") :
+            pixelLevels = (int(-32768),int(32767))
+        elif datatype==str("uint16") :
+            pixelLevels = (int(0),int(65536))
+        elif datatype==str("int32") :
+            pixelLevels = (int(-2147483648),int(2147483647))
+        elif datatype==str("uint32") :
+            pixelLevels = (int(0),int(4294967296))
+        elif datatype==str("int64") :
+            pixelLevels = (int(-9223372036854775808),int(9223372036854775807))
+        elif datatype==str("uint64") :
+            pixelLevels = (int(0),int(18446744073709551615))
+        elif datatype==str("float32") :
+            pixelLevels = (float(0.0),float(1.0))
+        elif datatype==str("float64") :
+            pixelLevels = (float(0.0),float(1.0))
+        else :
+            raise Exception('unknown datatype' + datatype)
+            return
+        self.minimum = pixelLevels[0]
+        self.minimumText.setText(str(self.minimum))
+        self.low = self.minimum
+        self.lowText.setText(str(self.low))
+        self.maximum  = pixelLevels[1]
+        self.maximumText.setText(str(self.maximum))
+        self.high = self.maximum
+        self.highText.setText(str(self.high))
+
+    def closeEvent(self, event) :
+        if not self.okToClose : 
+            event.ignore()
+            self.hide()
+
+    def lowSliderValueChange(self) :
+        pixelRatio = float(self.lowSlider.value())/float(self.npixelLevels)
+        valueRange = float(self.maximum) - float(self.minimum)
+        value = pixelRatio*valueRange + self.minimum
+        if value>self.high : value = self.high
+        self.low= value
+        self.lowText.setText(str(self.low))
+        
+    def highSliderValueChange(self) :
+        pixelRatio = float(self.highSlider.value())/float(self.npixelLevels)
+        valueRange = float(self.maximum) - float(self.minimum)
+        value = pixelRatio*valueRange + self.minimum
+        if value<self.low : value = self.low
+        self.high = value
+        self.highText.setText(str(self.high))
 
 class NTNDA_Viewer(QWidget) :
     def __init__(self,provider,providerName, parent=None):
@@ -125,9 +290,9 @@ class NTNDA_Viewer(QWidget) :
         self.nImages = 0
         self.imageRateText = QLabel()
         self.imageRateText.setFixedWidth(40)
-        self.pixelLevelsText = QLineEdit()
-        self.pixelLevelsText.setEnabled(False)
-        self.pixelLevelsText.editingFinished.connect(self.pixelLevelsEvent)
+        self.pixelLevelButton = QPushButton('pixelLevelControl')
+        self.pixelLevelButton.setEnabled(True)
+        self.pixelLevelButton.clicked.connect(self.pixelLevelEvent)
         self.compressRatio = round(1.0)
         self.compressRatioText.setText(str(self.compressRatio))
         self.createSecondRow()
@@ -156,13 +321,14 @@ class NTNDA_Viewer(QWidget) :
         self.arg = None
         self.setGeometry(10, 40, 1000, 40)
         self.show()
+        self.pixelLevelControl = PixelLevelControl()
 
     def closeEvent(self, event) :
         if self.isStarted : self.stop()
-        if self.imageDisplay!=None :
-            self.imageDisplay.ignoreClose = False
-            self.imageDisplay.hide()
-            self.imageDisplay.closeEvent(None)
+        self.imageDisplay.ignoreClose = False
+        self.imageDisplay.hide()
+        self.pixelLevelControl.ignoreClose = False
+        self.pixelLevelControl.hide()
         self.provider.done()
         
     def startEvent(self) :
@@ -180,11 +346,8 @@ class NTNDA_Viewer(QWidget) :
         except Exception as error:
             self.statusText.setText(repr(error))
 
-    def pixelLevelsEvent(self) :
-        try:
-            self.imageDisplay.setPixelLevels(self.pixelLevelsText.text())
-        except Exception as error:
-            self.statusText.setText(repr(error))
+    def pixelLevelEvent(self) :
+        self.pixelLevelControl.show()
 
     def start(self) :
         self.provider.start()
@@ -192,14 +355,12 @@ class NTNDA_Viewer(QWidget) :
         self.isStarted = True
         self.startButton.setEnabled(False)
         self.stopButton.setEnabled(True)
-        self.pixelLevelsText.setEnabled(True)
         self.channelNameText.setEnabled(False)
 
     def stop(self) :
         self.provider.stop()
         self.startButton.setEnabled(True)
         self.stopButton.setEnabled(False)
-        self.pixelLevelsText.setEnabled(False)
         self.channelNameLabel.setStyleSheet("background-color:gray")
         self.channelNameText.setEnabled(True)
         self.channel = None
@@ -254,6 +415,7 @@ class NTNDA_Viewer(QWidget) :
                 data = self.decompress(data,codec,compressed,uncompressed)
             image = self.dataToImage(data,dimArray)
             args = (image,self.width,self.height)
+            self.imageDisplay.setPixelLevels(self.pixelLevelControl.getPixelLevels())
             self.imageDisplay.newImage(args)
         except Exception as error:
             self.statusText.setText(repr(error))
@@ -394,7 +556,7 @@ class NTNDA_Viewer(QWidget) :
             else :
                 raise Exception('unknown datatype' + datatype)
                 return
-            self.pixelLevelsText.setText(str(pixelLevels))
+            self.pixelLevelControl.setDtype(datatype)
             self.imageDisplay.pixelLevels = pixelLevels
         if ny <self.minsize or nx<self.minsize :
             raise Exception('ny <',self.minsize,' or nx<',self.minsize)
@@ -468,9 +630,7 @@ class NTNDA_Viewer(QWidget) :
         imageRateLabel = QLabel("imageRate:")
         box.addWidget(imageRateLabel)
         box.addWidget(self.imageRateText)
-        pixelLevelsLabel = QLabel("pixel levels")
-        box.addWidget(pixelLevelsLabel)
-        box.addWidget(self.pixelLevelsText)
+        box.addWidget(self.pixelLevelButton)
         wid =  QWidget()
         wid.setLayout(box)
         wid.setFixedHeight(40)
