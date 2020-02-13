@@ -29,13 +29,13 @@ class NTNDA_Viewer_Provider(object) :
     def callback(self,arg) :
         self.NTNDA_Viewer.callback(arg)
 
-class ImageDisplay(RawImageWidget):
-    def __init__(self,name= 'ImageDisplay', parent=None, **kargs):
+class RawImageDisplay(RawImageWidget):
+    def __init__(self, name,left,top,parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
-        self.setObjectName('ImageDisplay')
-        self.setWindowTitle('ImageDisplay')
-        self.left = 10
-        self.top = 250
+        self.setObjectName(name)
+        self.setWindowTitle(name)
+        self.left = left
+        self.top = top
         self.maxsize = 800
         self.width = self.maxsize
         self.height = self.maxsize
@@ -43,6 +43,7 @@ class ImageDisplay(RawImageWidget):
         self.pixelLevels = (0,0)
         self.okToClose = False
         self.isHidden = True
+        self.arg = None
 
     def closeEvent(self, event) :
         if self.ignoreClose :
@@ -54,9 +55,12 @@ class ImageDisplay(RawImageWidget):
         self.pixelLevels = pixelLevels
 
     def newImage(self,arg):
-        image = arg[0]
-        width = arg[1]
-        height = arg[2]
+        self.arg = arg
+
+    def display(self) :
+        image = self.arg[0]
+        width = self.arg[1]
+        height = self.arg[2]
         if self.isHidden or width!= self.width or height!=self.height :
             self.width = width
             self.height = height
@@ -66,33 +70,34 @@ class ImageDisplay(RawImageWidget):
         self.setImage(image,levels=self.pixelLevels)
         return 0
 
-class FindLibrary(object) :
-    def __init__(self, parent=None):
-        self.save = dict()
-    def find(self,name) :
-        lib = self.save.get(name)
-        if lib!=None : return lib
-        result = ctypes.util.find_library(name)
-        if result==None : return None
-        if os.name == 'nt':
-            lib = ctypes.windll.LoadLibrary(result)
-        else :
-            lib = ctypes.cdll.LoadLibrary(result)
-        if lib!=None : self.save.update({name : lib})
-        return lib
-
-class PixelLevelControl(QWidget) :
-    def __init__(self, parent=None):
+class ImageControl(QWidget) :
+    def __init__(self,  name,left,top,parent=None, **kargs):
         super(QWidget, self).__init__(parent)
+        self.setObjectName(name)
+        self.name = name
+        self.ignoreClose = True
+        self.okToClose = False
+        self.isHidden = True
+        self.rawImageDisplay = RawImageDisplay(name + ' image',left,top)
+        self.arg = None      
         self.npixelLevels = 255
-        self.windowTitle = 'Pixel_Level_Control'
+        self.windowTitle = name + ' Control'
         self.dtype = ""
         self.minimum = 0;
         self.low = 0
         self.high = self.npixelLevels
         self.maximum = self.npixelLevels
         self.okToClose = False
-        self.isHidden = True
+        self.isHidden = False
+# title row
+        value = '{:>85}'.format(name) + ' control'
+        titleLabel = QLabel(value)
+        box = QHBoxLayout()
+        box.addWidget(titleLabel)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(40)
+        self.titleRow = wid
 # first row
         minimumLabel = QLabel("minimum")
         minimumLabel.setFixedWidth(150)
@@ -109,7 +114,7 @@ class PixelLevelControl(QWidget) :
         box.addWidget(maximumLabel)
         wid =  QWidget()
         wid.setLayout(box)
-        wid.setFixedHeight(40)
+        wid.setFixedHeight(35)
         self.firstRow = wid
 #second row
         self.minimumText = QLineEdit()
@@ -133,7 +138,7 @@ class PixelLevelControl(QWidget) :
         box.addWidget(self.maximumText)
         wid =  QWidget()
         wid.setLayout(box)
-        wid.setFixedHeight(40)
+        wid.setFixedHeight(30)
         self.secondRow = wid
 #third row
         self.lowSlider = QSlider(Qt.Horizontal)
@@ -159,9 +164,10 @@ class PixelLevelControl(QWidget) :
         self.thirdRow = wid
 #create window
         layout = QGridLayout()
-        layout.addWidget(self.firstRow,0,0)
-        layout.addWidget(self.secondRow,1,0)
-        layout.addWidget(self.thirdRow,2,0)
+        layout.addWidget(self.titleRow,0,0)
+        layout.addWidget(self.firstRow,1,0)
+        layout.addWidget(self.secondRow,2,0)
+        layout.addWidget(self.thirdRow,3,0)
         self.setLayout(layout)
         self.setWindowTitle(self.windowTitle)
         self.lowSlider.valueChanged.connect(self.lowSliderValueChange)
@@ -219,6 +225,7 @@ class PixelLevelControl(QWidget) :
         else :
             raise Exception('unknown datatype' + datatype)
             return
+        self.rawImageDisplay.setPixelLevels(pixelLevels);
         self.minimum = pixelLevels[0]
         self.minimumText.setText(str(self.minimum))
         self.low = self.minimum
@@ -232,6 +239,8 @@ class PixelLevelControl(QWidget) :
         if not self.okToClose : 
             event.ignore()
             self.hide()
+        self.rawImageDisplay.okToClose = True
+        self.rawImageDisplay.hide()
 
     def lowSliderValueChange(self) :
         pixelRatio = float(self.lowSlider.value())/float(self.npixelLevels)
@@ -240,6 +249,8 @@ class PixelLevelControl(QWidget) :
         if value>self.high : value = self.high
         self.low= value
         self.lowText.setText(str(self.low))
+        self.setPixelLevels((self.low,self.high))
+        self.rawImageDisplay.display()
         
     def highSliderValueChange(self) :
         pixelRatio = float(self.highSlider.value())/float(self.npixelLevels)
@@ -248,6 +259,33 @@ class PixelLevelControl(QWidget) :
         if value<self.low : value = self.low
         self.high = value
         self.highText.setText(str(self.high))
+        self.setPixelLevels((self.low,self.high))
+        self.rawImageDisplay.display()
+        
+
+    def setPixelLevels(self,pixelLevels) :
+        self.rawImageDisplay.setPixelLevels(pixelLevels)
+
+    def newImage(self,arg):
+        self.rawImageDisplay.newImage(arg)
+
+    def display(self) :
+        self.rawImageDisplay.display()
+
+class FindLibrary(object) :
+    def __init__(self, parent=None):
+        self.save = dict()
+    def find(self,name) :
+        lib = self.save.get(name)
+        if lib!=None : return lib
+        result = ctypes.util.find_library(name)
+        if result==None : return None
+        if os.name == 'nt':
+            lib = ctypes.windll.LoadLibrary(result)
+        else :
+            lib = ctypes.cdll.LoadLibrary(result)
+        if lib!=None : self.save.update({name : lib})
+        return lib
 
 class NTNDA_Viewer(QWidget) :
     def __init__(self,provider,providerName, parent=None):
@@ -255,6 +293,7 @@ class NTNDA_Viewer(QWidget) :
         self.provider = provider
         self.provider.NTNDA_Viewer = self
         self.windowTitle = providerName + "_NTNDA_Viewer"
+        self.image = ()
 # first row
         self.startButton = QPushButton('start')
         self.startButton.setEnabled(True)
@@ -290,18 +329,20 @@ class NTNDA_Viewer(QWidget) :
         self.nImages = 0
         self.imageRateText = QLabel()
         self.imageRateText.setFixedWidth(40)
-        self.pixelLevelButton = QPushButton('pixelLevelControl')
-        self.pixelLevelButton.setEnabled(True)
-        self.pixelLevelButton.clicked.connect(self.pixelLevelEvent)
+        self.snapButton = QPushButton('snap')
+        self.snapButton.setEnabled(True)
+        self.snapButton.clicked.connect(self.snapEvent)
         self.compressRatio = round(1.0)
         self.compressRatioText.setText(str(self.compressRatio))
-        self.createSecondRow()
-# third row
         self.clearButton = QPushButton('clear')
         self.clearButton.setEnabled(True)
         self.clearButton.clicked.connect(self.clearEvent)    
         self.statusText = QLineEdit()
         self.statusText.setText('nothing done so far')
+        self.createSecondRow()
+# third row
+        self.dynamicDisplay = ImageControl('dynamic',10,300)
+        self.snapDisplay = ImageControl('snap',600,300)
         self.createThirdRow()
 # initialize
         layout = QGridLayout()
@@ -317,18 +358,18 @@ class NTNDA_Viewer(QWidget) :
         self.minsize = 16
         self.width = self.maxsize
         self.height = self.maxsize
-        self.imageDisplay = ImageDisplay()
         self.arg = None
-        self.setGeometry(10, 40, 1000, 40)
+        self.setGeometry(10, 40, 1000, 100)
         self.show()
-        self.pixelLevelControl = PixelLevelControl()
+        self.dynamicDisplay.show()
+        self.snapDisplay.show()
 
     def closeEvent(self, event) :
         if self.isStarted : self.stop()
-        self.imageDisplay.ignoreClose = False
-        self.imageDisplay.hide()
-        self.pixelLevelControl.ignoreClose = False
-        self.pixelLevelControl.hide()
+        self.dynamicDisplay.ignoreClose = False
+        self.dynamicDisplay.close()
+        self.snapDisplay.ignoreClose = False
+        self.snapDisplay.close()
         self.provider.done()
         
     def startEvent(self) :
@@ -346,8 +387,12 @@ class NTNDA_Viewer(QWidget) :
         except Exception as error:
             self.statusText.setText(repr(error))
 
-    def pixelLevelEvent(self) :
-        self.pixelLevelControl.show()
+    def snapEvent(self) :
+        if len(self.image)<=0 : return
+        self.snapDisplay.setDtype(self.datatype)
+        args = (self.image,self.width,self.height)
+        self.snapDisplay.newImage(args)
+        self.snapDisplay.display()
 
     def start(self) :
         self.provider.start()
@@ -413,10 +458,10 @@ class NTNDA_Viewer(QWidget) :
         try:
             if codecNameLength != 0 : 
                 data = self.decompress(data,codec,compressed,uncompressed)
-            image = self.dataToImage(data,dimArray)
-            args = (image,self.width,self.height)
-            self.imageDisplay.setPixelLevels(self.pixelLevelControl.getPixelLevels())
-            self.imageDisplay.newImage(args)
+            self.image = self.dataToImage(data,dimArray)
+            args = (self.image,self.width,self.height)
+            self.dynamicDisplay.newImage(args)
+            self.dynamicDisplay.display()
         except Exception as error:
             self.statusText.setText(repr(error))
         self.nImages = self.nImages + 1
@@ -533,31 +578,7 @@ class NTNDA_Viewer(QWidget) :
         if datatype!=self.datatype :
             self.datatype = datatype
             self.dtypeText.setText(self.datatype)
-            if datatype==str("int8") :
-                pixelLevels = (int(-128),int(127))
-            elif datatype==str("uint8") :
-                pixelLevels = (int(0),int(255))
-            elif datatype==str("int16") :
-                pixelLevels = (int(-32768),int(32767))
-            elif datatype==str("uint16") :
-                pixelLevels = (int(0),int(65536))
-            elif datatype==str("int32") :
-                pixelLevels = (int(-2147483648),int(2147483647))
-            elif datatype==str("uint32") :
-                pixelLevels = (int(0),int(4294967296))
-            elif datatype==str("int64") :
-                pixelLevels = (int(-9223372036854775808),int(9223372036854775807))
-            elif datatype==str("uint64") :
-                pixelLevels = (int(0),int(18446744073709551615))
-            elif datatype==str("float32") :
-                pixelLevels = (float(0.0),float(1.0))
-            elif datatype==str("float64") :
-                pixelLevels = (float(0.0),float(1.0))
-            else :
-                raise Exception('unknown datatype' + datatype)
-                return
-            self.pixelLevelControl.setDtype(datatype)
-            self.imageDisplay.pixelLevels = pixelLevels
+            self.dynamicDisplay.setDtype(datatype)
         if ny <self.minsize or nx<self.minsize :
             raise Exception('ny <',self.minsize,' or nx<',self.minsize)
         if nx!=self.nx :
@@ -584,9 +605,6 @@ class NTNDA_Viewer(QWidget) :
             height = width*ratio
         self.width = width
         self.height = height
-        if self.imageDisplay.isHidden : 
-            self.imageDisplay.width = width
-            self.imageDisplay.height = height
         return image
 
     def createFirstRow(self) :
@@ -630,14 +648,7 @@ class NTNDA_Viewer(QWidget) :
         imageRateLabel = QLabel("imageRate:")
         box.addWidget(imageRateLabel)
         box.addWidget(self.imageRateText)
-        box.addWidget(self.pixelLevelButton)
-        wid =  QWidget()
-        wid.setLayout(box)
-        wid.setFixedHeight(40)
-        self.secondRow = wid
-
-    def createThirdRow(self) :
-        box = QHBoxLayout()
+        box.addWidget(self.snapButton)
         box.addWidget(self.clearButton)
         statusLabel = QLabel("  status:")
         statusLabel.setFixedWidth(50)
@@ -646,6 +657,15 @@ class NTNDA_Viewer(QWidget) :
         wid =  QWidget()
         wid.setLayout(box)
         wid.setFixedHeight(40)
+        self.secondRow = wid
+
+    def createThirdRow(self) :
+        box = QHBoxLayout()
+        box.addWidget(self.dynamicDisplay)
+        box.addWidget(self.snapDisplay)
+        wid =  QWidget()
+        wid.setLayout(box)
+        wid.setFixedHeight(90)
         self.thirdRow = wid
 
 
