@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.02.04
+# PY_NTNDA_Viewer 2020.02.15
 
 PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -8,16 +8,12 @@ This is almost ready for prime time.
 
 There are currently 2 versions:
 
-1) PY_NTNDA_Viewer.py 
-This uses p4p and crashes when simDetector is started in continous mode.
+1) P4P_NTNDA_Viewer.py 
+This uses **p4p**.
 2) PVAPY_NTNDA_Viewer.py
-This uses pvapy.
-It seems to does not crash when simDetector is started in continous mode.
-But pvapy is not available on windows.
+This uses **pvapy**.
+**pvapy** is not available on windows and does not provide connect/disconnect notification.
 
-Both are quite similar.
-Note that class ImageDisplay does not access anything from class PY_NTNDA_Viewer.
-And other than calling ImageDisplay.newImage no code accesses anythink from other threads.
 
 ## Running the example
 
@@ -59,6 +55,12 @@ then I just enter
 
 ### start P4P_NTNDA_Viewer or PVAPY_NTNDA_Viewer
 
+The channelName can be specified in three ways:
+
+1) Via environment variable **EPICS_NTNDA_VIEWER_CHANNELNAME**.
+2) As a command line argument.
+3) By entering it via the viewer when in stop mode.
+
 In order to use the codec support from **areaDetector** you must have
 a path to **areaDetector/ADSupport/lib...** defined.
 The details differ between windows and linux or macos.
@@ -66,7 +68,8 @@ The details differ between windows and linux or macos.
 An example is **exampleStartP4P**, which uses **p4p** for communication with the simDetector.
 
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/epics7/areaDetector/ADSupport/lib/linux-x86_64
-    python P4P_NTNDA_Viewer.py 13SIM1:Pva1:Image
+    export EPICS_NTNDA_VIEWER_CHANNELNAME="13SIM1:Pva1:Image"
+    python P4P_NTNDA_Viewer.py
 
 
 I start it via

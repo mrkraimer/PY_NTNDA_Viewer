@@ -82,7 +82,7 @@ class PVAPYProvider(QObject,NTNDA_Viewer_Provider) :
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     PVAPYProvider = PVAPYProvider()
-    channelName = None
+    channelName = ""
     nargs = len(sys.argv)
     if nargs>=2 :
         channelName = sys.argv[1]

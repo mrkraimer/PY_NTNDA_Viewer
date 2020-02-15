@@ -235,6 +235,8 @@ class ImageControl(QWidget) :
         self.maximumText.setText(str(self.maximum))
         self.high = self.maximum
         self.highText.setText(str(self.high))
+        self.lowSlider.setValue(0)
+        self.highSlider.setValue(self.npixelLevels)
 
     def closeEvent(self, event) :
         if not self.okToClose : 
@@ -309,6 +311,10 @@ class NTNDA_Viewer(QWidget) :
         self.snapButton = QPushButton('snap')
         self.snapButton.setEnabled(True)
         self.snapButton.clicked.connect(self.snapEvent)
+        if len(self.provider.getChannelName())<1 :
+            name = os.getenv('EPICS_NTNDA_VIEWER_CHANNELNAME')
+            print('name=',name)
+            if name!= None : self.provider.setChannelName(name)
         self.channelNameLabel = QLabel("channelName:")
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
@@ -447,7 +453,9 @@ class NTNDA_Viewer(QWidget) :
             self.statusText.setText(repr(error))
 
     def snapEvent(self) :
-        if len(self.image)<=0 : return
+        if len(self.image)<=0 : 
+            self.statusText.setText("no image is available")
+            return
         self.snapDisplay.setDtype(self.datatype)
         args = (self.image,self.width,self.height)
         self.snapDisplay.newImage(args)
