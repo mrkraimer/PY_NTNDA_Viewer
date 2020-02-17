@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from NTNDA_Viewer import NTNDA_Viewer_Provider,NTNDA_Viewer
+from NTNDA_Channel_Provider import NTNDA_Channel_Provider
+from NTNDA_Viewer import NTNDA_Viewer
 from pvaccess import *
 import sys
 from threading import Event
@@ -20,11 +21,11 @@ class GetChannel(object) :
         self.save.update({channelName : channel})
         return channel
 
-class PVAPYProvider(QObject,NTNDA_Viewer_Provider) :
+class PVAPYProvider(QObject,NTNDA_Channel_Provider) :
     callbacksignal = pyqtSignal()
     def __init__(self):
         QObject.__init__(self)
-        NTNDA_Viewer_Provider.__init__(self)
+        NTNDA_Channel_Provider.__init__(self)
         self.getChannel = GetChannel()
         self.callbacksignal.connect(self.mycallback)
         self.callbackDoneEvent = Event()
@@ -42,6 +43,8 @@ class PVAPYProvider(QObject,NTNDA_Viewer_Provider) :
         self.callbacksignal.emit()
         self.callbackDoneEvent.wait()
         self.callbackDoneEvent.clear()
+    def callback(self,arg) :
+        self.NTNDA_Viewer.callback(arg)
     def mycallback(self) :
         struct = self.struct
         arg = dict()

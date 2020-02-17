@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 
-from NTNDA_Viewer import NTNDA_Viewer_Provider,NTNDA_Viewer
+from NTNDA_Channel_Provider import NTNDA_Channel_Provider
+from NTNDA_Viewer import NTNDA_Viewer
 from p4p.client.thread import Context
 import sys
 from threading import Event
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QObject,pyqtSignal
 
-class P4PProvider(QObject,NTNDA_Viewer_Provider) :
+class P4PProvider(QObject,NTNDA_Channel_Provider) :
     callbacksignal = pyqtSignal()
     def __init__(self):
         QObject.__init__(self)
-        NTNDA_Viewer_Provider.__init__(self)
+        NTNDA_Channel_Provider.__init__(self)
         self.callbacksignal.connect(self.mycallback)
         self.callbackDoneEvent = Event()
         self.firstCallback = True
@@ -31,6 +32,8 @@ class P4PProvider(QObject,NTNDA_Viewer_Provider) :
         self.ctxt.close()
     def done(self) :
         pass
+    def callback(self,arg) :
+        self.NTNDA_Viewer.callback(arg)
     def p4pcallback(self,arg) :
         if self.isClosed : return
         self.struct = arg;
