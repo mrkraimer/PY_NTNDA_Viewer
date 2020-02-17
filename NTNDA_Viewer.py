@@ -7,7 +7,6 @@ from p4p.client.thread import Context
 from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit,QSlider
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from PyQt5.QtCore import *
-from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 
 import ctypes
 import ctypes.util
@@ -16,7 +15,7 @@ import os
 from NTNDA_Channel_Provider import NTNDA_Channel_Provider
 
 from NTNDA_RawImage_Display import NTNDA_RawImage_Display
-from NTNDA_PyplotImage_Display import NTNDA_PyplotImage_Display
+from NTNDA_pyqtgraph_Display import NTNDA_pyqtgraph_Display
 
 
 class ImageControl(QWidget) :
@@ -24,11 +23,12 @@ class ImageControl(QWidget) :
         super(QWidget, self).__init__(parent)
         self.setObjectName(name)
         self.name = name
+        self.left = left
+        self.top = top
         self.ignoreClose = True
         self.okToClose = False
         self.isHidden = True
-        self.rawImageDisplay = NTNDA_RawImage_Display(name + ' raw image',left,top)
-        self.pyplotImageDisplay = NTNDA_PyplotImage_Display(name + ' pyplot image',left,top)
+        self.rawImageDisplay = NTNDA_RawImage_Display(name + ' raw image',self.left,self.top)
         self.imageDisplay = self.rawImageDisplay
         self.arg = None      
         self.npixelLevels = 255
@@ -44,11 +44,11 @@ class ImageControl(QWidget) :
 # title row
         value = '{:>85}'.format(name) + ' control       '
         titleLabel = QLabel(value)
-        self.changeImageButton = QPushButton('changeImage')
+        self.snapImageButton = QPushButton('snapImage')
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(titleLabel)
-        box.addWidget(self.changeImageButton)
+        box.addWidget(self.snapImageButton)
         wid =  QWidget()
         wid.setLayout(box)
         self.titleRow = wid
@@ -235,16 +235,10 @@ class ImageControl(QWidget) :
     def display(self) :
         self.imageDisplay.display()
 
-    def changeImage(self) :
-        datatype = self.dtype
-        self.imageDisplay.hide()
-        if self.imageDisplay==self.rawImageDisplay : self.imageDisplay = self.pyplotImageDisplay
-        else : self.imageDisplay = self.rawImageDisplay
-        if self.arg==None : return
-        self.setDtype(datatype)
-        self.setPixelLevels((self.low,self.high))
-        self.newImage(self.arg)
-        self.imageDisplay.display()
+    def snapImage(self) :
+        pyplotImageDisplay = NTNDA_pyqtgraph_Display(self.name + ' pyqtgraph image',self.left,self.top)
+        pyplotImageDisplay.newImage(self.arg)
+        pyplotImageDisplay.display()
 
 class FindLibrary(object) :
     def __init__(self, parent=None):
@@ -366,9 +360,9 @@ class NTNDA_Viewer(QWidget) :
         self.secondRow = wid
 # third row
         self.dynamicDisplay = ImageControl('dynamic',10,300)
-        self.dynamicDisplay.changeImageButton.clicked.connect(self.changeDynamicImageEvent)
+        self.dynamicDisplay.snapImageButton.clicked.connect(self.changeDynamicImageEvent)
         self.snapDisplay = ImageControl('snap',600,300)
-        self.snapDisplay.changeImageButton.clicked.connect(self.changeSnapImageEvent)
+        self.snapDisplay.snapImageButton.clicked.connect(self.changeSnapImageEvent)
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(self.dynamicDisplay)
@@ -430,16 +424,10 @@ class NTNDA_Viewer(QWidget) :
         self.snapDisplay.display()
 
     def changeDynamicImageEvent(self) :
-        if True :
-           self.statusText.setText('changeImage does not work')
-           return
-        self.dynamicDisplay.changeImage()
+        self.dynamicDisplay.snapImage()
 
     def changeSnapImageEvent(self) :
-        if True :
-           self.statusText.setText('changeImage does not work')
-           return
-        self.snapDisplay.changeImage()
+        self.snapDisplay.snapImage()
 
     def start(self) :
         self.provider.start()
