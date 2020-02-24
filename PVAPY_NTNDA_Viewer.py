@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-from NTNDA_Channel_Provider import NTNDA_Channel_Provider
-from NTNDA_Viewer import NTNDA_Viewer
+from NTNDA_Viewer import NTNDA_Viewer,NTNDA_Channel_Provider
 from pvaccess import *
 import sys
 from threading import Event
