@@ -611,6 +611,7 @@ class NTNDA_Viewer(QWidget) :
             lib = self.findLibrary.find('bitshuffle')
         else : lib = None
         if lib==None : raise Exception('shared library ' +codecName + ' not found')
+        self.imageDict["dtype"] = dtype
         inarray = bytearray(data)
         in_char_array = ctypes.c_ubyte * compressed
         out_char_array = ctypes.c_ubyte * uncompressed
