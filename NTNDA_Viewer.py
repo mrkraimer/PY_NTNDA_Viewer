@@ -272,7 +272,8 @@ class ImageControl(QWidget) :
         self.low= value
         self.lowText.setText(str(self.low))
         self.pixelLevels = (self.low,self.high)
-        self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
+        if self.isZoomImage : self.displayZoom()
+        else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
         
     def highSliderValueChange(self) :
         pixelRatio = float(self.highSlider.value())/float(self.npixelLevels)
@@ -285,7 +286,8 @@ class ImageControl(QWidget) :
         self.high = value
         self.highText.setText(str(self.high))
         self.pixelLevels = (self.low,self.high)
-        self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
+        if self.isZoomImage : self.displayZoom()
+        else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
 
     def newImage(self,imageDict):
         self.imageDict["image"] = imageDict["image"]
