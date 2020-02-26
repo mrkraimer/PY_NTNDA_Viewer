@@ -265,8 +265,7 @@ It is is not it generates an exception that results in a error message.
 If the name is one of the supported types, the decompression code uses the following:
 
 * The compressedSize and uncompressedSize from the NTNDArray passed by the channel provider
-* One of the shared libraries from compressedSize: **blosc**, **decompressJPEG**,or **bitshuffle**.
-* **codec.parameter.int**
+* One of the shared libraries from: **blosc**, **decompressJPEG**,or **bitshuffle**.
 
 
 **codec.parameter.int** is an integer representing the data types for the value

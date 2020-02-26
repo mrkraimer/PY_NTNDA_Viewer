@@ -3,9 +3,8 @@
 import sys,time,signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 import numpy as np
-from p4p.client.thread import Context
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
-from PyQt5.QtWidgets import QApplication,QWidget,QLabel,QLineEdit,QSlider
+from PyQt5.QtWidgets import QWidget,QLabel,QLineEdit,QSlider
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
 from PyQt5.QtCore import *
 
@@ -16,7 +15,7 @@ import os
 class NTNDA_Channel_Provider(object) :
     '''
     Base class for monitoring an NTNDArray channel from an areaDetector IOC.
-    The methods are call by NTNDA_Viewer.
+    The methods are called by NTNDA_Viewer.
     '''
 
     def __init__(self) :
@@ -68,7 +67,6 @@ class ImageControl(QWidget) :
         self.ylow = 0
         self.numx = 0
         self.numy = 0
-
 # title row
         titleLabel = QLabel('{:>85}'.format(name) + ' image')
         box = QHBoxLayout()
@@ -199,25 +197,24 @@ class ImageControl(QWidget) :
             if ind<0 : raise Exception('does not end with )')
             text = text[:-1]
             split = text.split(',')
+            if len(split)!=4 : raise Exception('not four values')
             xlow = int(split[0])
             ylow = int(split[1])
             numx = int(split[2])
             numy = int(split[3])
+            if xlow<self.pixelLevels[0] : raise Exception('xlow bad')
+            if ylow<self.pixelLevels[0] : raise Exception('ylow bad')
+            if xlow>(self.imageDict["nx"]-16) : raise Exception('xlow bad')
+            if ylow>(self.imageDict["ny"]-16) : raise Exception('ylow bad')
+            if numx>(self.imageDict["nx"]-xlow) : raise Exception('numx bad')
+            if numy>(self.imageDict["ny"]-ylow) : raise Exception('numy bad')
         except Exception as error:
-            self.zoomText.setText('error:' + repr(error))
-        reset = False
-        if xlow>(self.imageDict["nx"]-16) : xlow = self.imageDict["nx"] - 16; reset = True
-        if ylow>(self.imageDict["ny"]-16) : ylow = self.imageDict["ny"] - 16; reset = True
-        if numx>(self.imageDict["nx"]-xlow) : numx = self.imageDict["nx"] - xlow; reset = True
-        if numy>(self.imageDict["ny"]-ylow) : numy = self.imageDict["ny"] - ylow; reset = True
+            self.zoomText.setText(str(error))
+            return
         self.xlow = xlow
         self.ylow = ylow
         self.numx = numx
         self.numy = numy
-        if reset :
-            zoom = '(' + str(self.xlow) +',' + str(self.ylow) \
-                    + ',' +str(self.numx) + ',' + str(self.numy) + ')'
-            self.zoomText.setText(zoom)
         self.isZoomImage = True
         self.displayZoom()
 
@@ -243,11 +240,15 @@ class ImageControl(QWidget) :
             if minimum>self.maximum :
                 minimum = self.maximum
                 self.minimumText.setText(str(minimum))
-            if minimum>self.low :
-                self.low = minimum
-                self.lowText.setText(str(self.low))
+            self.minimum = minimum
+            self.low = minimum
+            self.lowText.setText(str(self.low))
+            self.pixelLevels = (self.low,self.high)
+            self.lowSlider.setValue(0)
+            if self.isZoomImage : self.displayZoom()
+            else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
         except Exception as error:
-            self.minimumText.setText(repr(error))
+            self.minimumText.setText(str(error))
 
     def maximumEvent(self) :
         try:
@@ -255,11 +256,15 @@ class ImageControl(QWidget) :
             if maximum<self.minimum :
                 maximum = self.minimum
                 self.maximumText.setText(str(maximum))
-            if maximum<self.high :
-                self.high = maximum
-                self.highText.setText(str(self.high))
+            self.maximum = maximum
+            self.high = maximum
+            self.highText.setText(str(self.high))
+            self.pixelLevels = (self.low,self.high)
+            self.highSlider.setValue(self.npixelLevels)
+            if self.isZoomImage : self.displayZoom()
+            else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
         except Exception as error:
-            self.maximumText.setText(repr(error))
+            self.maximumText.setText(str(error))
 
     def lowSliderValueChange(self) :
         pixelRatio = float(self.lowSlider.value())/float(self.npixelLevels)
@@ -502,7 +507,7 @@ class NTNDA_Viewer(QWidget) :
         try:
             self.provider.setChannelName(self.channelNameText.text())
         except Exception as error:
-            self.statusText.setText(repr(error))
+            self.statusText.setText(str(error))
 
     def snapEvent(self) :
         if len(self.imageDict["image"])<=0 : 
@@ -532,7 +537,7 @@ class NTNDA_Viewer(QWidget) :
         if len(arg)==1 :
             value = arg.get("exception")
             if value!=None :
-                self.statusText.setText(repr(error))
+                self.statusText.setText(str(error))
                 return
             value = arg.get("status")
             if value!=None :
@@ -556,7 +561,7 @@ class NTNDA_Viewer(QWidget) :
             codecName = codec['name']
             codecNameLength = len(codecName)
         except Exception as error:
-            self.statusText.setText(repr(error))
+            self.statusText.setText(str(error))
             return
         ndim = len(dimArray)
         if ndim!=2 and ndim!=3 :
@@ -572,6 +577,7 @@ class NTNDA_Viewer(QWidget) :
                 self.compressRatio = ratio
                 self.compressRatioText.setText(str(self.compressRatio))
             self.imageDict["dtype"] = data.dtype
+            self.dtypeText.setText(str(self.imageDict["dtype"]))
         try:
             if codecNameLength != 0 : 
                 data = self.decompress(data,codec,compressed,uncompressed)
@@ -579,7 +585,7 @@ class NTNDA_Viewer(QWidget) :
             self.dynamicDisplay.newImage(self.imageDict)
             self.dynamicDisplay.display()
         except Exception as error:
-            self.statusText.setText(repr(error))
+            self.statusText.setText(str(error))
         self.nImages = self.nImages + 1
         self.timenow = time.time()
         timediff = self.timenow - self.lasttime
@@ -614,6 +620,7 @@ class NTNDA_Viewer(QWidget) :
         else : lib = None
         if lib==None : raise Exception('shared library ' +codecName + ' not found')
         self.imageDict["dtype"] = dtype
+        self.dtypeText.setText(str(self.imageDict["dtype"]))
         inarray = bytearray(data)
         in_char_array = ctypes.c_ubyte * compressed
         out_char_array = ctypes.c_ubyte * uncompressed
@@ -691,7 +698,6 @@ class NTNDA_Viewer(QWidget) :
                 return
         else :
                 raise Exception('ndim not 2 or 3')
-
         if dtype!=self.imageDict["dtype"] :
             self.imageDict["dtype"] = dtype
             self.dtypeText.setText(str(self.imageDict["dtype"]))
