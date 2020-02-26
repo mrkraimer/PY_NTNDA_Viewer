@@ -6,6 +6,7 @@ import numpy as np
 from pyqtgraph.widgets.RawImageWidget import RawImageWidget
 from PyQt5.QtWidgets import QWidget,QLabel,QLineEdit,QSlider
 from PyQt5.QtWidgets import QPushButton,QHBoxLayout,QGridLayout
+from PyQt5.QtWidgets import QRubberBand
 from PyQt5.QtCore import *
 
 import ctypes
@@ -44,15 +45,41 @@ def imageDictCreate() :
 class Image_Display(RawImageWidget) :
     def __init__(self,parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
+        self.rubberBand = QRubberBand(QRubberBand.Rectangle,self)
+        self.mousePressPosition = QPoint(0,0)
+        self.mouseReleasePosition = QPoint(0,0)
+        self.clientCallback = None
 
     def display(self,image,pixelLevels) :
         self.setImage(image,levels=pixelLevels)
         self.show()
 
+    def mousePressEvent(self,event) :
+        self.mousePressPosition = QPoint(event.pos())
+        self.rubberBand.setGeometry(QRect(self.mousePressPosition,QSize()))
+        self.rubberBand.show()
+
+    def mouseMoveEvent(self,event) :
+        if not self.mousePressPosition.isNull() :
+            self.rubberBand.setGeometry(QRect(self.mousePressPosition,event.pos()).normalized())
+
+    def mouseReleaseEvent(self,event) :
+        self.mouseReleasePosition = QPoint(event.pos())
+        if not self.clientCallback==None : 
+            self.clientCallback(self.mousePressPosition,self.mouseReleasePosition)
+        self.rubberBand.hide()
+
+    def clientReleaseEvent(self,clientCallback) :
+        self.clientCallback = clientCallback
+
+
+
 class ImageControl(QWidget) :
+
     def __init__(self,  name,parent=None, **kargs):
         super(QWidget, self).__init__(parent)
         self.imageDisplay = Image_Display()
+        self.imageDisplay.clientReleaseEvent(self.clientReleaseEvent)
         self.imageDict = imageDictCreate()
         self.name = name
         self.pixelLevels = (int(0),int(255))
@@ -159,13 +186,14 @@ class ImageControl(QWidget) :
         wid.setLayout(box)
         self.zoomRow = wid
 # image row
+        self.size = 600
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(self.imageDisplay)
         wid =  QWidget()
         wid.setLayout(box)
-        wid.setFixedHeight(600)
-        wid.setFixedWidth(600)
+        wid.setFixedHeight(self.size)
+        wid.setFixedWidth(self.size)
         self.imageRow = wid
 #create window
         layout = QGridLayout()
@@ -186,6 +214,25 @@ class ImageControl(QWidget) :
         self.zoomText.setText(zoom)
         self.isZoomImage = False
         self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
+
+    def clientReleaseEvent(self,pressPosition,releasePosition) :
+        xmin = pressPosition.x()
+        ymin = pressPosition.y()
+        xmax = releasePosition.x()
+        ymax = releasePosition.y()
+        if self.isZoomImage :
+            ratiox = self.numx/self.size
+            ratioy = self.numy/self.size
+        else :
+            ratiox = self.imageDict["nx"]/self.size
+            ratioy = self.imageDict["ny"]/self.size
+        xlow = int(xmin*ratiox)
+        ylow = int(ymin*ratioy)
+        nx = int(xmax*ratiox) - xlow
+        ny = int(ymax*ratioy) - ylow
+        zoom = '(' + str(xlow) + ',' + str(ylow) + ',' + str(nx) + ',' + str(ny) + ')'
+        self.zoomText.setText(zoom)
+        self.zoomTextEvent()
 
     def zoomTextEvent(self) :
         try :
