@@ -262,7 +262,7 @@ The code in **NTNDA_Viewer.decompress** decompresses the data in **value** and c
 It first checks that the name is jpeg, blosc, lz4, or bslz4.
 It is is not it generates an exception that results in a error message.
 
-If the name is one of the types supported decompression it uses the following:
+If the name is one of the supported types, the decompression code uses the following:
 
 * The compressedSize and uncompressedSize from the NTNDArray passed by the channel provider
 * One of the shared libraries from compressedSize: **blosc**, **decompressJPEG**,or **bitshuffle**.
@@ -287,13 +287,13 @@ The mapping from the integer value to the numpy dtype is:
         elif typevalue== 10 : dtype = "float64"
         else : raise Exception('decompress mapIntToType failed')
 
-The final result is the compressed data in **value** is converted to a 1d numpy array with the correct dtype.
+The final result is the compressed data in **value** converted to an uncompressed 1d numpy array with the correct dtype.
 
 ### dimension
 
 This is used by **NTNDA_Viewer.dataToImage** to transform the 1d numpy array to either a 2d or 3d numpy array.
 If the number of dimensions is 2 than the data is for a monocromatic image.
-If the dimension is 3 then one of the dimensions must have size 3 and must be RBG data.
+If the dimension is 3 then one of the dimensions must have size 3 and must be RGB data.
 Note also that areaDetector and numpy use different conventions for **x** and **y**.
 Thus **NTNDA_Viewer.dataToImage** transposes x and y. 
 
