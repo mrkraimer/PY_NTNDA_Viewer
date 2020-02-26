@@ -9,7 +9,7 @@ from PyQt5.QtCore import QObject,pyqtSignal
 
 class GetChannel(object) :
     '''
-       This exists because whenever a new channel was started a crask occured
+       This exists because whenever a new channel was started a crash occured
     '''
     def __init__(self, parent=None):
         self.save = dict()
@@ -55,7 +55,7 @@ class PVAPYProvider(QObject,NTNDA_Channel_Provider) :
             for x in val :
                 element = x
             if element == None : 
-                raise Exception('value is not numpyarray')
+                raise Exception('value is not numpy  array')
             value = val[element]
             arg['value'] = value
             arg['dimension'] = struct['dimension']

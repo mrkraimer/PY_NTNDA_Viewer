@@ -1,6 +1,6 @@
-# PY_NTNDA_Viewer 2020.02.15
+# PY_NTNDA_Viewer 2020.02.26
 
-PY_NTNDA_Viewer is Python code that is similar to the EPICS_NTNDA_Viewer that comes with areaDector.
+PY_NTNDA_Viewer is Python code that is similar to the Java EPICS_NTNDA_Viewer that comes with areaDector.
 
 ## Status
 
@@ -128,21 +128,17 @@ Now select **Int16** and also set **Gain** to 255.
 This works. **UInt16** also works.
 
 I think that **Int32**, **UInt32**, **Int64**, **UInt64**, **Float32**, and **Float64** also work.
-But is is not easy to test.
+But it is not easy to test.
 
 
 ### color mode
 
-Set **Data type** to either **Int8** or **Uint8**.
-
-Then set **Color mode** to **Mono** or **RGB1** or **RGB2** or **RGB3** 
+Set **Color mode** to **Mono** or **RGB1** or **RGB2** or **RGB3** 
 These should all work.
 
 ### codec
 
-Set **Data type** to either **Int8** or **Uint8** and **Color mode** to any type
-
-Then select plugins All.
+Select plugins All.
 On the new window set the Port for PVA1 to **CODEC1**.
 Then on the line for CODEC1 click on **More**.
 In the new window set Enable to **Enable**.
@@ -163,7 +159,7 @@ For a 1024x1024 image:
 2) EPICS_NTDA_Viewer handles 140 frames/second
 3) NTDA_Viewer only does about 20 frames/second.
 
-For a 512cx512 image:
+For a 512x512 image:
 
 1) NDPVa generates 196 frames/sec
 2) EPICS_NTDA_Viewer handles 193 frames/second
@@ -185,4 +181,119 @@ I did some searching on-line and saw:
 But for python3, **weave** is no longer supported 
 
 It is possible that ImageJ is not really displaying 140/193 frames/s because the actual drawing operation may be deferred and throttled just like Qt. But the code thinks it is doing the faster rate because is not waiting for the display to update.
+
+## Theory of Operation
+
+PY_NTNDA_Viewer provides support for an NTNDArray supported by **areaDetector/ADCore/ADApp/ntndArrayConverterSrc**.
+
+PY_NTNDA_Viewer has the following python modules:
+
+1) P4P_NTNDA_Viewer.py : a channel provider that uses p4p to connect to an NTNDArray
+2) PVAPY_NTNDA_Viewer.py : a channel provider that uses pvapy to connect to an NTNDArray
+3) NTNDA_Viewer.py : The code that displays images provides by a channel provider.
+
+**NTNDA_Viewer.py** defines the following python classes:
+
+* NTNDA_Channel_Provider : a base class that a channel provider must implement
+* Image_Display : a class that displays an image
+* ImageControl: a class that calls Image_Display and provides sliders and zoom.
+* NTNDA_Viewer : A class that receives images from a channel provider.
+It supports decompression and conversion of 1d numpy arrays to either 2d or 3d numpy arrays.
+It then calls ImageControl with the 2d or 3d numpy array.
+
+
+### An NTDAArray has the following structure:
+
+    epics:nt/NTNDArray:1.0
+        union value                   // provider must present this a a 1d numpy array of one of the following types
+            boolean[] booleanValue    // not used by PY_NTNDA_Viewer
+            byte[] byteValue
+            short[] shortValue
+            int[] intValue
+            long[] longValue
+            ubyte[] ubyteValue
+            ushort[] ushortValue
+            uint[] uintValue
+            ulong[] ulongValue
+            float[] floatValue
+            double[] doubleValue
+        codec_t codec
+            string name
+            any parameters
+        long compressedSize
+        long uncompressedSize
+        dimension_t[] dimension
+            dimension_t
+                int size
+                // other fields not used by PY_NTNDA_Viewer
+        // other fields not used by PY_NTNDA_Viewer
+
+### value
+
+The channel provider, e.g. **PVAPYProvider** or **P4PProvider**, must provide this as a 1d numpy array.
+The mapping between the numpy dtype and the value type is:
+
+    value type     dtype
+    ----------     -----
+    byte           int8
+    short          int16
+    int            int32
+    long           int64
+    ubyte          uint8
+    ushort         uint16
+    uint           uint32
+    ulong          uint64
+    float          float32
+    double         float64
+
+### codec
+
+**codec** is always of the form
+
+    codec_t codec
+        string name jpeg   // must be one  of "", jpeg, blosc, lz4, or bslz4
+        any parameters
+            int  1         // indicates dtype for each pixel
+
+If **codec.name** is an empty string then **value** is not compressed.
+In this case the rest of this section does not apply.
+
+The code in **NTNDA_Viewer.decompress** decompresses the data in **value** and creates a 1d numpy array.
+It first checks that the name is jpeg, blosc, lz4, or bslz4.
+It is is not it generates an exception that results in a error message.
+
+If the name is one of the types supported decompression it uses the following:
+
+* The compressedSize and uncompressedSize from the NTNDArray passed by the channel provider
+* One of the shared libraries from compressedSize: **blosc**, **decompressJPEG**,or **bitshuffle**.
+* **codec.parameter.int**
+
+
+**codec.parameter.int** is an integer representing the data types for the value
+Note that for jpeg only dtype byte and ubyte are supported.
+For the other codec types all dtypes are supported.
+
+The mapping from the integer value to the numpy dtype is:
+
+        if typevalue== 1 : dtype = "int8"
+        elif typevalue== 5 : dtype = "uint"
+        elif typevalue== 2 : dtype = "int16"
+        elif typevalue== 6 : dtype = "uint16"
+        elif typevalue== 3 : dtype = "int32"
+        elif typevalue== 7 : dtype = "uint32"
+        elif typevalue== 4 : dtype = "int64"
+        elif typevalue== 8 : dtype = "uint64"
+        elif typevalue== 9 : dtype = "float32"
+        elif typevalue== 10 : dtype = "float64"
+        else : raise Exception('decompress mapIntToType failed')
+
+The final result is the compressed data in **value** is converted to a 1d numpy array with the correct dtype.
+
+### dimension
+
+This is used by **NTNDA_Viewer.dataToImage** to transform the 1d numpy array to either a 2d or 3d numpy array.
+If the number of dimensions is 2 than the data is for a monocromatic image.
+If the dimension is 3 then one of the dimensions must have size 3 and must be RBG data.
+Note also that areaDetector and numpy use different conventions for **x** and **y**.
+Thus **NTNDA_Viewer.dataToImage** transposes x and y. 
 
