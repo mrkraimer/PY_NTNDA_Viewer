@@ -49,6 +49,7 @@ class Image_Display(RawImageWidget) :
         self.mousePressPosition = QPoint(0,0)
         self.mouseReleasePosition = QPoint(0,0)
         self.clientCallback = None
+        self.mousePressed = False
 
     def display(self,image,pixelLevels) :
         self.setImage(image,levels=pixelLevels)
@@ -58,16 +59,19 @@ class Image_Display(RawImageWidget) :
         self.mousePressPosition = QPoint(event.pos())
         self.rubberBand.setGeometry(QRect(self.mousePressPosition,QSize()))
         self.rubberBand.show()
+        self.mousePressed = True
 
     def mouseMoveEvent(self,event) :
-        if not self.mousePressPosition.isNull() :
-            self.rubberBand.setGeometry(QRect(self.mousePressPosition,event.pos()).normalized())
+        if not self.mousePressed : return
+        self.rubberBand.setGeometry(QRect(self.mousePressPosition,event.pos()).normalized())
 
     def mouseReleaseEvent(self,event) :
+        if not self.mousePressed : return
         self.mouseReleasePosition = QPoint(event.pos())
         if not self.clientCallback==None : 
             self.clientCallback(self.mousePressPosition,self.mouseReleasePosition)
         self.rubberBand.hide()
+        self.mousePressed = False
 
     def clientReleaseEvent(self,clientCallback) :
         self.clientCallback = clientCallback
@@ -210,27 +214,49 @@ class ImageControl(QWidget) :
         self.show()
 
     def resetEvent(self) :
-        zoom = '(0,0,' + str(self.imageDict["nx"]) + ',' + str(self.imageDict["ny"]) + ')'
+        self.xlow = 0
+        self.ylow = 0
+        self.numx = self.imageDict["nx"]
+        self.numy = self.imageDict["ny"]
+        zoom = '(0,0,' + str(self.numx) + ',' + str(self.numy) + ')'
         self.zoomText.setText(zoom)
         self.isZoomImage = False
         self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
 
     def clientReleaseEvent(self,pressPosition,releasePosition) :
+        qrect = self.imageDisplay.geometry()
+        height = qrect.height()
+        width = qrect.width()
         xmin = pressPosition.x()
         ymin = pressPosition.y()
         xmax = releasePosition.x()
         ymax = releasePosition.y()
-        if self.isZoomImage :
-            ratiox = self.numx/self.size
-            ratioy = self.numy/self.size
+        if self.isZoomImage : 
+            xstart = self.xlow
+            ystart = self.ylow
+            sizex = self.numx
+            sizey = self.numy
         else :
-            ratiox = self.imageDict["nx"]/self.size
-            ratioy = self.imageDict["ny"]/self.size
-        xlow = int(xmin*ratiox)
-        ylow = int(ymin*ratioy)
-        nx = int(xmax*ratiox) - xlow
-        ny = int(ymax*ratioy) - ylow
-        zoom = '(' + str(xlow) + ',' + str(ylow) + ',' + str(nx) + ',' + str(ny) + ')'
+            xstart = 0
+            ystart = 0
+            sizex = self.imageDict["nx"]
+            sizey = self.imageDict["ny"]
+        if (sizex/sizey)>1.0 :
+            yfact = sizex/sizey
+            xfact = 1.0
+        elif (sizey/sizex)>1.0 :
+            yfact = 1.0
+            xfact = sizey/sizex
+        else :
+            yfact = 1.0
+            xfact = 1.0
+        ratiox = (sizex/width)*xfact
+        ratioy = (sizey/height)*yfact
+        xlow = int(xmin*ratiox) + self.xlow
+        ylow = int(ymin*ratioy) + self.ylow
+        numx = int((xmax-xmin)*ratiox)
+        numy = int((ymax-ymin)*ratioy)       
+        zoom = '(' + str(xlow) + ',' + str(ylow) + ',' + str(numx) + ',' + str(numy) + ')'
         self.zoomText.setText(zoom)
         self.zoomTextEvent()
 
