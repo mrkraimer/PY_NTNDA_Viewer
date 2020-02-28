@@ -228,6 +228,10 @@ class ImageControl(QWidget) :
         ymin = pressPosition.y()
         xmax = releasePosition.x()
         ymax = releasePosition.y()
+        if xmin==xmax and ymin>=ymax : return
+        if xmin>=xmax or ymin>=ymax :
+            self.statusText.setText('illegal mouse move')
+            return
         if self.isZoomImage : 
             xstart = self.xlow
             ystart = self.ylow
@@ -340,6 +344,7 @@ class ImageControl(QWidget) :
         if value>self.high :
             self.high = value
             self.highText.setText(str(round(self.high)))
+            self.highSlider.setValue(self.high)
         self.low= value
         self.lowText.setText(str(round(self.low)))
         self.pixelLevels = (self.low,self.high)
@@ -354,6 +359,7 @@ class ImageControl(QWidget) :
         if value<self.low :
             self.low = value
             self.lowText.setText(str(round(self.low)))
+            self.lowSlider.setValue(self.low)
         self.high = value
         self.highText.setText(str(round(self.high)))
         self.pixelLevels = (self.low,self.high)
