@@ -80,12 +80,12 @@ class Image_Display(RawImageWidget) :
 
 class ImageControl(QWidget) :
 
-    def __init__(self,  name,parent=None, **kargs):
+    def __init__(self,statusText,parent=None, **kargs):
         super(QWidget, self).__init__(parent)
+        self.statusText = statusText
         self.imageDisplay = Image_Display()
         self.imageDisplay.clientReleaseEvent(self.clientReleaseEvent)
         self.imageDict = imageDictCreate()
-        self.name = name
         self.pixelLevels = (int(0),int(255))
         self.npixelLevels = 255
         self.minimum = 0;
@@ -98,29 +98,26 @@ class ImageControl(QWidget) :
         self.ylow = 0
         self.numx = 0
         self.numy = 0
-# title row
-        titleLabel = QLabel('{:>85}'.format(name) + ' image')
-        box = QHBoxLayout()
-        box.setContentsMargins(0,0,0,0);
-        box.addWidget(titleLabel)
-        wid =  QWidget()
-        wid.setLayout(box)
-        self.titleRow = wid
 # first row
         minimumLabel = QLabel("minimum")
         minimumLabel.setFixedWidth(100)
         lowLabel = QLabel("low")
-        lowLabel.setFixedWidth(100)
+        lowLabel.setFixedWidth(90)
+        titleLabel = QLabel("pixel intensity")
+        titleLabel.setFixedWidth(110)
         highLabel = QLabel("high")
         highLabel.setFixedWidth(100)
         maximumLabel = QLabel("maximum")
-        maximumLabel.setFixedWidth(100)
+        maximumLabel.setFixedWidth(80)
+        zoomLabel = QLabel('||    zoom        (xlow,ylow,numx.numy)')
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(minimumLabel)
         box.addWidget(lowLabel);
+        box.addWidget(titleLabel);
         box.addWidget(highLabel);
         box.addWidget(maximumLabel)
+        box.addWidget(zoomLabel)
         wid =  QWidget()
         wid.setLayout(box)
         self.firstRow = wid
@@ -132,65 +129,67 @@ class ImageControl(QWidget) :
         self.minimumText.editingFinished.connect(self.minimumEvent)
         self.lowText = QLabel('')
         self.lowText.setFixedWidth(100)
+        spaceLabel = QLabel('')
+        spaceLabel.setFixedWidth(100)
         self.highText = QLabel('')
         self.highText.setFixedWidth(100)
         self.maximumText = QLineEdit()
-        self.maximumText.setFixedWidth(100)
+        self.maximumText.setFixedWidth(80)
         self.maximumText.editingFinished.connect(self.maximumEvent)
         self.maximumText.setEnabled(True)
         self.maximumText.setText('')
+        dividerLabel = QLabel('||')
+        dividerLabel.setFixedWidth(20)
+        self.resetButton = QPushButton('reset')
+        self.resetButton.setFixedWidth(40)
+        self.resetButton.setEnabled(True)
+        self.resetButton.clicked.connect(self.resetEvent)
+        self.zoomText = QLineEdit()
+        self.zoomText.setEnabled(True)
+        self.zoomText.setFixedWidth(180)
+        self.zoomText.editingFinished.connect(self.zoomTextEvent)
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(self.minimumText)
         box.addWidget(self.lowText)
+        box.addWidget(spaceLabel)
         box.addWidget(self.highText)
         box.addWidget(self.maximumText)
+        box.addWidget(dividerLabel)
+        box.addWidget(self.resetButton)
+        box.addWidget(self.zoomText)
         wid =  QWidget()
         wid.setLayout(box)
         self.secondRow = wid
 #third row
         self.lowSlider = QSlider(Qt.Horizontal)
+        self.lowSlider.setContentsMargins(0,0,0,0);
         self.lowSlider.setMinimum(0)
         self.lowSlider.setMaximum(self.npixelLevels)
         self.lowSlider.setValue(0)
         self.lowSlider.setTickPosition(QSlider.TicksBelow)
         self.lowSlider.setTickInterval(10)
-        self.lowSlider.setFixedWidth(300)
+        self.lowSlider.setFixedWidth(256)
         self.highSlider = QSlider(Qt.Horizontal)
+        self.highSlider.setContentsMargins(0,0,0,0);
         self.highSlider.setMinimum(0)
         self.highSlider.setMaximum(self.npixelLevels)
         self.highSlider.setValue(self.npixelLevels)
         self.highSlider.setTickPosition(QSlider.TicksBelow)
         self.highSlider.setTickInterval(10)
-        self.highSlider.setFixedWidth(300)
+        self.highSlider.setFixedWidth(256)
         box = QHBoxLayout()
+        box.addStretch(0)
+        box.setSpacing(0);
         box.setContentsMargins(0,0,0,0);
+        box.setGeometry(QRect(0, 0, 500, 20))
         box.addWidget(self.lowSlider)
         box.addWidget(self.highSlider)
         wid =  QWidget()
         wid.setLayout(box)
         self.thirdRow = wid
-# zoom row
-        titleLabel = QLabel(name+' zoom ')
-        zoomLabel = QLabel('(xlow,ylow,numx.numy)')
-        self.zoomText = QLineEdit()
-        self.zoomText.setEnabled(True)
-        self.zoomText.setFixedWidth(140)
-        self.zoomText.editingFinished.connect(self.zoomTextEvent)
-        self.resetButton = QPushButton('reset')
-        self.resetButton.setEnabled(True)
-        self.resetButton.clicked.connect(self.resetEvent)
-        box = QHBoxLayout()
-        box.setContentsMargins(0,0,0,0);
-        box.addWidget(titleLabel)
-        box.addWidget(zoomLabel)
-        box.addWidget(self.zoomText)
-        box.addWidget(self.resetButton)
-        wid =  QWidget()
-        wid.setLayout(box)
-        self.zoomRow = wid
 # image row
-        self.size = 600
+        self.size = 800
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         box.addWidget(self.imageDisplay)
@@ -202,12 +201,10 @@ class ImageControl(QWidget) :
 #create window
         layout = QGridLayout()
         layout.setSpacing(0);
-        layout.addWidget(self.titleRow,0,0)
-        layout.addWidget(self.firstRow,1,0)
-        layout.addWidget(self.secondRow,2,0)
-        layout.addWidget(self.thirdRow,3,0)
-        layout.addWidget(self.zoomRow,4,0)
-        layout.addWidget(self.imageRow,5,0)
+        layout.addWidget(self.firstRow,0,0,alignment=Qt.AlignLeft)
+        layout.addWidget(self.secondRow,1,0,alignment=Qt.AlignLeft)
+        layout.addWidget(self.thirdRow,2,0,alignment=Qt.AlignLeft)
+        layout.addWidget(self.imageRow,3,0,alignment=Qt.AlignCenter)
         self.setLayout(layout)
         self.lowSlider.valueChanged.connect(self.lowSliderValueChange)
         self.highSlider.valueChanged.connect(self.highSliderValueChange)
@@ -275,14 +272,10 @@ class ImageControl(QWidget) :
             ylow = int(split[1])
             numx = int(split[2])
             numy = int(split[3])
-            if xlow<self.pixelLevels[0] : raise Exception('xlow bad')
-            if ylow<self.pixelLevels[0] : raise Exception('ylow bad')
-            if xlow>(self.imageDict["nx"]-16) : raise Exception('xlow bad')
-            if ylow>(self.imageDict["ny"]-16) : raise Exception('ylow bad')
-            if numx>(self.imageDict["nx"]-xlow) : raise Exception('numx bad')
-            if numy>(self.imageDict["ny"]-ylow) : raise Exception('numy bad')
+            if numx<0 : raise Exception('numx='+str(numx)+' not valid')
+            if numy<0 : raise Exception('numy='+str(numy)+' not valid')
         except Exception as error:
-            self.zoomText.setText(str(error))
+            self.statusText.setText(str(error))
             return
         self.xlow = xlow
         self.ylow = ylow
@@ -346,9 +339,9 @@ class ImageControl(QWidget) :
         if value>self.maximum : value = self.maximum
         if value>self.high :
             self.high = value
-            self.highText.setText(str(self.high))
+            self.highText.setText(str(round(self.high)))
         self.low= value
-        self.lowText.setText(str(self.low))
+        self.lowText.setText(str(round(self.low)))
         self.pixelLevels = (self.low,self.high)
         if self.isZoomImage : self.displayZoom()
         else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
@@ -360,9 +353,9 @@ class ImageControl(QWidget) :
         if value<self.minimum : value = self.minimum
         if value<self.low :
             self.low = value
-            self.lowText.setText(str(self.low))
+            self.lowText.setText(str(round(self.low)))
         self.high = value
-        self.highText.setText(str(self.high))
+        self.highText.setText(str(round(self.high)))
         self.pixelLevels = (self.low,self.high)
         if self.isZoomImage : self.displayZoom()
         else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
@@ -444,16 +437,18 @@ class NTNDA_Viewer(QWidget) :
         self.startButton = QPushButton('start')
         self.startButton.setEnabled(True)
         self.startButton.clicked.connect(self.startEvent)
+        self.startButton.setFixedWidth(40)
         self.isStarted = False
         self.stopButton = QPushButton('stop')
         self.stopButton.setEnabled(False)
         self.stopButton.clicked.connect(self.stopEvent)
-        self.snapButton = QPushButton('snap')
-        self.snapButton.setEnabled(True)
-        self.snapButton.clicked.connect(self.snapEvent)
+        self.stopButton.setFixedWidth(40)
         if len(self.provider.getChannelName())<1 :
             name = os.getenv('EPICS_NTNDA_VIEWER_CHANNELNAME')
             if name!= None : self.provider.setChannelName(name)
+        self.nImages = 0
+        self.imageRateText = QLabel()
+        self.imageRateText.setFixedWidth(40)
         self.channelNameLabel = QLabel("channelName:")
         self.channelNameText = QLineEdit()
         self.channelNameText.setEnabled(True)
@@ -463,7 +458,9 @@ class NTNDA_Viewer(QWidget) :
         box.setContentsMargins(0,0,0,0);
         box.addWidget(self.startButton)
         box.addWidget(self.stopButton)
-        box.addWidget(self.snapButton)
+        imageRateLabel = QLabel("imageRate:")
+        box.addWidget(imageRateLabel)
+        box.addWidget(self.imageRateText)
         box.addWidget(self.channelNameLabel)
         box.addWidget(self.channelNameText)
         wid =  QWidget()
@@ -482,16 +479,15 @@ class NTNDA_Viewer(QWidget) :
         self.codecName = ''
         self.codecNameText = QLabel()
         self.codecNameText.setFixedWidth(40)
+
         self.compressRatioText = QLabel()
         self.compressRatioText.setFixedWidth(40)
-        self.nImages = 0
-        self.imageRateText = QLabel()
-        self.imageRateText.setFixedWidth(40)
         self.compressRatio = round(1.0)
         self.compressRatioText.setText(str(self.compressRatio))
         self.clearButton = QPushButton('clear')
         self.clearButton.setEnabled(True)
-        self.clearButton.clicked.connect(self.clearEvent)    
+        self.clearButton.clicked.connect(self.clearEvent)
+        self.clearButton.setFixedWidth(40)
         self.statusText = QLineEdit()
         self.statusText.setText('nothing done so far')
         box = QHBoxLayout()
@@ -521,9 +517,6 @@ class NTNDA_Viewer(QWidget) :
         compressRatioLabel = QLabel("compressRatio:")
         box.addWidget(compressRatioLabel)
         box.addWidget(self.compressRatioText)
-        imageRateLabel = QLabel("imageRate:")
-        box.addWidget(imageRateLabel)
-        box.addWidget(self.imageRateText)
         box.addWidget(self.clearButton)
         statusLabel = QLabel("  status:")
         statusLabel.setFixedWidth(50)
@@ -533,12 +526,10 @@ class NTNDA_Viewer(QWidget) :
         wid.setLayout(box)
         self.secondRow = wid
 # third row
-        self.dynamicDisplay = ImageControl('dynamic')
-        self.snapDisplay = ImageControl('snap')
+        self.imageControl = ImageControl(self.statusText)
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
-        box.addWidget(self.dynamicDisplay)
-        box.addWidget(self.snapDisplay)
+        box.addWidget(self.imageControl)
         wid =  QWidget()
         wid.setLayout(box)
         self.thirdRow = wid
@@ -558,10 +549,8 @@ class NTNDA_Viewer(QWidget) :
         self.width = self.maxsize
         self.height = self.maxsize
         self.arg = None
-        self.setGeometry(10, 40, 1000, 100)
         self.show()
-        self.dynamicDisplay.show()
-        self.snapDisplay.show()
+        self.imageControl.show()
 
     def closeEvent(self, event) :
         if self.isStarted : self.stop()
@@ -581,13 +570,6 @@ class NTNDA_Viewer(QWidget) :
             self.provider.setChannelName(self.channelNameText.text())
         except Exception as error:
             self.statusText.setText(str(error))
-
-    def snapEvent(self) :
-        if len(self.imageDict["image"])<=0 : 
-            self.statusText.setText("no image is available")
-            return
-        self.snapDisplay.newImage(self.imageDict)
-        self.snapDisplay.display()
 
     def start(self) :
         self.provider.start()
@@ -655,8 +637,8 @@ class NTNDA_Viewer(QWidget) :
             if codecNameLength != 0 : 
                 data = self.decompress(data,codec,compressed,uncompressed)
             self.dataToImage(data,dimArray)
-            self.dynamicDisplay.newImage(self.imageDict)
-            self.dynamicDisplay.display()
+            self.imageControl.newImage(self.imageDict)
+            self.imageControl.display()
         except Exception as error:
             self.statusText.setText(str(error))
         self.nImages = self.nImages + 1
