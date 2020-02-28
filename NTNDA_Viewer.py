@@ -42,14 +42,23 @@ class NTNDA_Channel_Provider(object) :
 def imageDictCreate() :
     return {"image" : None , "dtype" : "" , "nx" : 0 , "ny" : 0 ,  "nz" : 0 }
 
-class Image_Display(RawImageWidget) :
+class Image_Display(RawImageWidget,QWidget) :
     def __init__(self,parent=None, **kargs):
         RawImageWidget.__init__(self, parent=parent,scaled=True)
+        super(QWidget, self).__init__(parent)
+        self.setWindowTitle("image")
         self.rubberBand = QRubberBand(QRubberBand.Rectangle,self)
         self.mousePressPosition = QPoint(0,0)
         self.mouseReleasePosition = QPoint(0,0)
         self.clientCallback = None
         self.mousePressed = False
+        self.okToClose = False
+        self.setGeometry(QRect(10, 300, 600, 600))
+
+    def closeEvent(self,event) :
+        if not self.okToClose :
+            self.hide()
+            return
 
     def display(self,image,pixelLevels) :
         self.setImage(image,levels=pixelLevels)
@@ -188,23 +197,12 @@ class ImageControl(QWidget) :
         wid =  QWidget()
         wid.setLayout(box)
         self.thirdRow = wid
-# image row
-        self.size = 800
-        box = QHBoxLayout()
-        box.setContentsMargins(0,0,0,0);
-        box.addWidget(self.imageDisplay)
-        wid =  QWidget()
-        wid.setLayout(box)
-        wid.setFixedHeight(self.size)
-        wid.setFixedWidth(self.size)
-        self.imageRow = wid
 #create window
         layout = QGridLayout()
         layout.setSpacing(0);
         layout.addWidget(self.firstRow,0,0,alignment=Qt.AlignLeft)
         layout.addWidget(self.secondRow,1,0,alignment=Qt.AlignLeft)
         layout.addWidget(self.thirdRow,2,0,alignment=Qt.AlignLeft)
-        layout.addWidget(self.imageRow,3,0,alignment=Qt.AlignCenter)
         self.setLayout(layout)
         self.lowSlider.valueChanged.connect(self.lowSliderValueChange)
         self.highSlider.valueChanged.connect(self.highSliderValueChange)
@@ -303,6 +301,7 @@ class ImageControl(QWidget) :
                         image[indx][indy][indz] = fromimage[indx+self.xlow][indy+self.ylow][indz]
         else : raise Exception('ndim not 2 or 3')
         self.imageDisplay.display(image,self.pixelLevels)
+        self.imageDisplay.show()
 
     def minimumEvent(self) :
         try:
@@ -416,6 +415,7 @@ class ImageControl(QWidget) :
             self.displayZoom()
             return
         self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
+        self.imageDisplay.show()
           
 class FindLibrary(object) :
     def __init__(self, parent=None):
@@ -437,7 +437,7 @@ class NTNDA_Viewer(QWidget) :
         super(QWidget, self).__init__(parent)
         self.provider = ntnda_Channel_Provider
         self.provider.NTNDA_Viewer = self
-        self.windowTitle = providerName + "_NTNDA_Viewer"
+        self.setWindowTitle(providerName + "_NTNDA_Viewer")
         self.imageDict = imageDictCreate()
 # first row
         self.startButton = QPushButton('start')
@@ -546,7 +546,6 @@ class NTNDA_Viewer(QWidget) :
         layout.addWidget(self.secondRow,1,0)
         layout.addWidget(self.thirdRow,2,0)
         self.setLayout(layout)
-        self.setWindowTitle(self.windowTitle)
         self.findLibrary = FindLibrary()
         self.subscription = None
         self.lasttime = time.time() -2
@@ -560,6 +559,8 @@ class NTNDA_Viewer(QWidget) :
 
     def closeEvent(self, event) :
         if self.isStarted : self.stop()
+        self.imageControl.imageDisplay.okToClose = True
+        self.imageControl.imageDisplay.close()
         self.provider.done()
         
     def startEvent(self) :
