@@ -270,14 +270,27 @@ class ImageControl(QWidget) :
             text = text[:-1]
             split = text.split(',')
             if len(split)!=4 : raise Exception('not four values')
-            xlow = int(split[0])
-            ylow = int(split[1])
-            numx = int(split[2])
-            numy = int(split[3])
-            if numx<0 : raise Exception('numx='+str(numx)+' not valid')
-            if numy<0 : raise Exception('numy='+str(numy)+' not valid')
+            xlow = split[0]
+            if not xlow.isdigit() : raise Exception('xlow is not a positive integer')
+            xlow = int(xlow)
+            ylow = split[1]
+            if not ylow.isdigit() : raise Exception('ylow is not a positive integer')
+            ylow = int(ylow)
+            numx = split[2]
+            if not numx.isdigit() : raise Exception('numx is not a positive integer')
+            numx = int(numx)
+            if numx<1 : raise Exception('numx must be at least 1')
+            numy = split[3]
+            if not numy.isdigit() : raise Exception('numy is not a positive integer')
+            numy = int(numy)
+            if numy<1 : raise Exception('numy must be at least 1')
+            sizex = xlow + numx
+            if sizex>self.imageDict["nx"] : raise Exception('xlow + numx gt nx')
+            sizey = ylow + numy
+            if sizey>self.imageDict["ny"] : raise Exception('ylow + numy gt ny')
         except Exception as error:
             self.statusText.setText(str(error))
+            self.statusText.setStyleSheet("background-color:red")
             return
         self.xlow = xlow
         self.ylow = ylow
@@ -496,6 +509,7 @@ class NTNDA_Viewer(QWidget) :
         self.clearButton.setFixedWidth(40)
         self.statusText = QLineEdit()
         self.statusText.setText('nothing done so far')
+        self.statusText.setFixedWidth(200)
         box = QHBoxLayout()
         box.setContentsMargins(0,0,0,0);
         nxLabel = QLabel("nx:")
@@ -571,6 +585,7 @@ class NTNDA_Viewer(QWidget) :
 
     def clearEvent(self) :
         self.statusText.setText('')
+        self.statusText.setStyleSheet("background-color:white")
     
     def channelNameEvent(self) :
         try:
