@@ -91,6 +91,7 @@ class ImageControl(QWidget) :
 
     def __init__(self,statusText,parent=None, **kargs):
         super(QWidget, self).__init__(parent)
+        self.isClosed = False
         self.statusText = statusText
         self.imageDisplay = Image_Display()
         self.imageDisplay.clientReleaseEvent(self.clientReleaseEvent)
@@ -379,6 +380,7 @@ class ImageControl(QWidget) :
         else :self.imageDisplay.display(self.imageDict["image"],self.pixelLevels)
 
     def newImage(self,imageDict):
+        if self.isClosed : return
         self.imageDict["image"] = imageDict["image"]
         self.imageDict["nx"] = imageDict["nx"]
         self.imageDict["ny"] = imageDict["ny"]
@@ -424,6 +426,7 @@ class ImageControl(QWidget) :
             self.isZoomImage = False
 
     def display(self) :
+        if self.isClosed : return
         if self.isZoomImage :
             self.displayZoom()
             return
@@ -448,6 +451,7 @@ class FindLibrary(object) :
 class NTNDA_Viewer(QWidget) :
     def __init__(self,ntnda_Channel_Provider,providerName, parent=None):
         super(QWidget, self).__init__(parent)
+        self.isClosed = False
         self.provider = ntnda_Channel_Provider
         self.provider.NTNDA_Viewer = self
         self.setWindowTitle(providerName + "_NTNDA_Viewer")
@@ -573,10 +577,12 @@ class NTNDA_Viewer(QWidget) :
 
     def closeEvent(self, event) :
         if self.isStarted : self.stop()
+        self.isClosed = True
+        self.imageControl.isClosed = True
+        self.provider.done()
         self.imageControl.imageDisplay.okToClose = True
         self.imageControl.imageDisplay.close()
-        self.provider.done()
-        
+
     def startEvent(self) :
         self.start()
 
@@ -611,6 +617,7 @@ class NTNDA_Viewer(QWidget) :
         self.isStarted = False
 
     def callback(self,arg):
+        if self.isClosed : return
         if len(arg)==1 :
             value = arg.get("exception")
             if value!=None :
