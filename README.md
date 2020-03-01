@@ -31,43 +31,43 @@ When **start** is pressed the following appears
 
 ### First row of control window
 
-1) start
+1) **start**
 Clicking this button starts communication with server.
-2) stop
+2) **stop**
 Clicking this button stops communication with server.
-3) imageRate
+3) **imageRate**
 This shows the number of images/second that are being displayed.
 Note that this is normally less than the number of images/second that the server is producing.
-4) channelName
+4) **channelName**
 This is the name of the channel that provides the NTNDArray.
 When in stopped mode a new channel name can be specified.
 
 ### Second row of control window
 
-1) nx,ny,nz
+1) **nx,ny,nz**
 This is the size of the image provided by the server.
 Note that areaDetector and Python have a different convention for what is x and y.
 This viewer uses the Python convention:
 x is width, y is height, (x0,y0) is upper left corner.
-2) dtype
+2) **dtype**
 Data type for each pixel.
 The following data types are supported: signed and unsigned interers of length (8,16,32,64) bits,
 IEE Float32, and IEE Float64.
-3) codec
+3) **codec**
 This shows compression type and ratio.
 Ses below for details.
-4) status
+4) **status**
 This shows current status.
 Clicking **clear** erase the current status.
 
 ### Third row of control window
 
-1) pixel intensity control
+1) **pixel intensity control**
 This shows the pixel settings and provides low and high sliders for manipulating the image intensity.
 Note that to minimum and maximum values depend of the **dtype**.
 Normally the uses will not want to change minimum or maximum for 8 it 16 bit integers.
 For the other data types, especially float types, the user can change these if the user knows what to expect from the server.
-2) zoom image control
+2) **zoom image control**
 This allows the user to select a sub-image to display.
 The user can use the mouse to select the sub-image by clicking, draging, and releaseing the mouse
 The directing must be in the (low,right) direction.
