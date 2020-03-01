@@ -2,9 +2,9 @@
 
 PY_NTNDA_Viewer is Python code that is similar to the Java EPICS_NTNDA_Viewer that comes with areaDector.
 
-## Status
+It is available in **areaDetector/ADViewers/PY_NTNDA_Viewer**
 
-This is almost ready for prime time.
+It is a viewer for images obtained from a areaDetector channel that provides an NTNDArray.
 
 There are currently 2 versions:
 
@@ -14,6 +14,10 @@ This uses **p4p**.
 This uses **pvapy**.
 **pvapy** is not available on windows and does not provide connect/disconnect notification.
 
+Below there are instructions for
+
+1) Starting the example
+2) Installing required Python modules.
 
 ## User Interface
 
@@ -25,10 +29,54 @@ When **start** is pressed the following appears
 
 ![image window](image.png)
 
+### First row of control window
 
-## Running the example
+1) start
+Clicking this button starts communication with server.
+2) stop
+Clicking this button stops communication with server.
+3) imageRate
+This shows the number of images/second that are being displayed.
+Note that this is normally less than the number of images/second that the server is producing.
+4) channelName
+This is the name of the channel that provides the NTNDArray.
+When in stopped mode a new channel name can be specified.
 
-Note that my computer is using fedora 30, which also means python3.
+### Second row of control window
+
+1) nx,ny,nz
+This is the size of the image provided by the server.
+Note that areaDetector and Python have a different convention for what is x and y.
+This viewer uses the Python convention:
+x is width, y is height, (x0,y0) is upper left corner.
+2) dtype
+Data type for each pixel.
+The following data types are supported: signed and unsigned interers of length (8,16,32,64) bits,
+IEE Float32, and IEE Float64.
+3) codec
+This shows compression type and ratio.
+Ses below for details.
+4) status
+This shows current status.
+Clicking **clear** erase the current status.
+
+### Third row of control window
+
+1) pixel intensity control
+This shows the pixel settings and provides low and high sliders for manipulating the image intensity.
+Note that to minimum and maximum values depend of the **dtype**.
+Normally the uses will not want to change minimum or maximum for 8 it 16 bit integers.
+For the other data types, especially float types, the user can change these if the user knows what to expect from the server.
+2) zoom image control
+This allows the user to select a sub-image to display.
+The user can use the mouse to select the sub-image by clicking, draging, and releaseing the mouse
+The directing must be in the (low,right) direction.
+The zoom window can also be directly entered by the user.
+The initial values of (xlow,ylow,numx,numy) are (0,0,nx,ny).
+Clicking reset restores the initial settings.
+
+
+## Starting the example
 
 ### Starting simDetector
 
