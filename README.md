@@ -1,4 +1,4 @@
-# PY_NTNDA_Viewer 2020.02.26
+# PY_NTNDA_Viewer 2020.03.01
 
 PY_NTNDA_Viewer is Python code that is similar to the Java EPICS_NTNDA_Viewer that comes with areaDector.
 
@@ -13,6 +13,17 @@ This uses **p4p**.
 2) PVAPY_NTNDA_Viewer.py
 This uses **pvapy**.
 **pvapy** is not available on windows and does not provide connect/disconnect notification.
+
+
+## User Interface
+
+When either version of the viewer is started the following appears:
+
+![control window](control.png)
+
+When **start** is pressed the following appears
+
+![image window](image.png)
 
 
 ## Running the example
