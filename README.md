@@ -1,10 +1,10 @@
-# PY_NTNDA_Viewer 2020.03.01
+# PY_NTNDA_Viewer 2020.03.02
 
 PY_NTNDA_Viewer is Python code that is similar to the Java EPICS_NTNDA_Viewer that comes with areaDector.
 
 It is available in **areaDetector/ADViewers/PY_NTNDA_Viewer**
 
-It is a viewer for images obtained from a areaDetector channel that provides an NTNDArray.
+It is a viewer for images obtained from an areaDetector channel that provides an NTNDArray.
 
 There are currently 2 versions:
 
@@ -17,7 +17,7 @@ This uses **pvapy**.
 Below there are instructions for
 
 1) Starting the example
-2) Installing required Python modules.
+2) Installation of required Python modules.
 
 ## User Interface
 
@@ -32,12 +32,12 @@ When **start** is pressed the following appears
 ### First row of control window
 
 1) **start**
-Clicking this button starts communication with server.
+Clicking this button starts communication with the server.
 2) **stop**
-Clicking this button stops communication with server.
+Clicking this button stops communication with the server.
 3) **imageRate**
 This shows the number of images/second that are being displayed.
-Note that this is normally less than the number of images/second that the server is producing.
+Note that this is normally less than the number of images the server is producing.
 4) **channelName**
 This is the name of the channel that provides the NTNDArray.
 When in stopped mode a new channel name can be specified.
@@ -45,9 +45,7 @@ When in stopped mode a new channel name can be specified.
 ### Second row of control window
 
 1) **nx,ny,nz**
-This is the size of the image provided by the server.
-Note that areaDetector and Python have a different convention for what is x and y.
-This viewer uses the Python convention:
+This is the size of the image provided by the server:
 x is width, y is height, (x0,y0) is upper left corner.
 2) **dtype**
 Data type for each pixel.
@@ -140,9 +138,12 @@ I start it via
 You will see errors if You have not installed all the python packages required.
 If it shows no errors click connect and start.
 
-Then run whatever opi tool you use to control the simDetector.
-Then select plugins All and enable the PVA1 plugin.
-Then click connect and then start.
+Then:
+
+1) run whatever opi tool you use to control the simDetector.
+2) select plugins All and enable the PVA1 plugin.
+3) click connect.
+4) click start.
 
 You should see images being displayed.
 
@@ -151,11 +152,10 @@ You should see images being displayed.
 ## Required python modules
 
 You must have python and pip installed.
-I am using ferora core 30 and it has python3 and pip3 installed.
 
 The other python modules can be installed via **pip install ...**
 
-For example I can issue the command
+For example issue the command
 
     sudo pip install numpy
 
@@ -169,7 +169,7 @@ The following is a list of modules required by PY_NTNDA_Viewer
 2) PyQt5
 3) PyQt5-sip
 4) QtPy
-5) p4p or pvapy
+5) p4p and/or pvapy
 6) pyqtgraph
 
 
@@ -186,14 +186,14 @@ This works just like **Uint8**.
 Now select **Int16** and also set **Gain** to 255.
 This works. **UInt16** also works.
 
-I think that **Int32**, **UInt32**, **Int64**, **UInt64**, **Float32**, and **Float64** also work.
+**Int32**, **UInt32**, **Int64**, **UInt64**, **Float32**, and **Float64** also work.
 But it is not easy to test.
 
 
 ### color mode
 
 Set **Color mode** to **Mono** or **RGB1** or **RGB2** or **RGB3** 
-These should all work.
+These all work.
 
 ### codec
 
@@ -353,5 +353,27 @@ This is used by **NTNDA_Viewer.dataToImage** to transform the 1d numpy array to 
 If the number of dimensions is 2 than the data is for a monocromatic image.
 If the dimension is 3 then one of the dimensions must have size 3 and must be RGB data.
 Note also that areaDetector and numpy use different conventions for **x** and **y**.
-Thus **NTNDA_Viewer.dataToImage** transposes x and y. 
+Thus **NTNDA_Viewer.dataToImage** transposes x and y.
+
+## Issues
+
+The original **NTNDA_Viewer** was done in:
+
+[PY_NTNDA_Viewer](https://github.com/mrkraimer/PY_NTNDA_Viewer).
+
+Many github issues were created. The following have not been resolved:
+
+### Cannot install pvapy on Windows 
+
+Currently pvapy is not supported on windows.
+Also it does not provided a callback reporting connection status.
+
+### Add Additional Performance Statistics
+
+NTND arrays carry id field that could be used to get more information about viewer performance, such as number of missed frames per second, total number of frames lost, etc.
+
+### RGB1 image display uses too much CPU
+
+This had lots of discussion.
+Mainly related to different versions of python modules.
 

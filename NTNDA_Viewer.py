@@ -1,4 +1,13 @@
 # NTNDA_Viewer.py
+'''
+Copyright - See the COPYRIGHT that is included with this distribution.
+    NTNDA_Viewer is distributed subject to a Software License Agreement found
+    in file LICENSE that is included with this distribution.
+
+author Marty Kraimer
+    latest date 2020.03.02
+    original development started 2019.12
+'''
 
 import sys,time,signal
 signal.signal(signal.SIGINT, signal.SIG_DFL)

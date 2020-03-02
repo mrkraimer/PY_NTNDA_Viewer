@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+'''
+Copyright - See the COPYRIGHT that is included with this distribution.
+    NTNDA_Viewer is distributed subject to a Software License Agreement found
+    in file LICENSE that is included with this distribution.
+
+author Marty Kraimer
+    latest date 2020.03.02
+    original development started 2019.12
+'''
 
 from NTNDA_Viewer import NTNDA_Viewer,NTNDA_Channel_Provider
 from pvaccess import *
