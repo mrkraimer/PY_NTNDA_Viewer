@@ -1,5 +1,9 @@
 # PY_NTNDA_Viewer 2020.03.02
 
+**NOTICE: This code has been moved to areaDetector/ADViewers/Python/PY_NTNDA_Viewer**
+
+Soon this repository will be deleted.
+
 PY_NTNDA_Viewer is Python code that is similar to the Java EPICS_NTNDA_Viewer that comes with areaDector.
 
 It is available in **areaDetector/ADViewers/PY_NTNDA_Viewer**
